@@ -1,0 +1,151 @@
+/**
+ * Web Worker for batch export processing
+ * Handles canvas generation in a separate thread to prevent UI blocking
+ */
+
+interface ExportTask {
+  id: string;
+  sectionContent: string;
+  textStyle: any;
+  backgroundImage?: string;
+  dimensions: { width: number; height: number };
+  pageNumber: number;
+}
+
+interface ExportResult {
+  id: string;
+  dataUrl: string;
+  pageNumber: number;
+  error?: string;
+}
+
+// Process a single export task
+async function processExportTask(task: ExportTask): Promise<ExportResult> {
+  try {
+    // Create offscreen canvas
+    const canvas = new OffscreenCanvas(task.dimensions.width, task.dimensions.height);
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Fill background
+    if (task.backgroundImage) {
+      // Load and draw background image
+      const response = await fetch(task.backgroundImage);
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      
+      ctx.drawImage(bitmap, 0, 0, task.dimensions.width, task.dimensions.height);
+    } else {
+      // Default white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, task.dimensions.width, task.dimensions.height);
+    }
+
+    // Configure text style
+    const fontSize = task.textStyle.fontSize || 24;
+    const fontFamily = task.textStyle.fontFamily || 'Arial';
+    const lineHeight = task.textStyle.lineHeight || 1.6;
+    const padding = 80;
+
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = task.textStyle.color || '#000000';
+    ctx.textAlign = task.textStyle.alignment || 'left';
+
+    // Word wrap and draw text
+    const maxWidth = task.dimensions.width - (padding * 2);
+    const lines = wrapText(ctx, task.sectionContent, maxWidth);
+    
+    let y = padding + fontSize;
+    lines.forEach(line => {
+      ctx.fillText(line, padding, y);
+      y += fontSize * lineHeight;
+    });
+
+    // Convert to blob and then to data URL
+    const blob = await canvas.convertToBlob({ type: 'image/png', quality: 0.95 });
+    const reader = new FileReader();
+    
+    return new Promise((resolve) => {
+      reader.onloadend = () => {
+        resolve({
+          id: task.id,
+          dataUrl: reader.result as string,
+          pageNumber: task.pageNumber
+        });
+      };
+      reader.readAsDataURL(blob);
+    });
+
+  } catch (error) {
+    return {
+      id: task.id,
+      dataUrl: '',
+      pageNumber: task.pageNumber,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// Text wrapping function
+function wrapText(ctx: OffscreenCanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const metrics = ctx.measureText(testLine);
+    
+    if (metrics.width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+// Listen for messages from main thread
+self.addEventListener('message', async (event) => {
+  const { type, tasks } = event.data;
+
+  if (type === 'EXPORT_BATCH') {
+    // Process tasks in parallel with a limit
+    const BATCH_SIZE = 3; // Process 3 at a time to avoid memory issues
+    const results: ExportResult[] = [];
+
+    for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
+      const batch = tasks.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map((task: ExportTask) => processExportTask(task))
+      );
+      
+      results.push(...batchResults);
+
+      // Send progress update
+      self.postMessage({
+        type: 'PROGRESS',
+        progress: results.length,
+        total: tasks.length
+      });
+    }
+
+    // Send final results
+    self.postMessage({
+      type: 'COMPLETE',
+      results
+    });
+  }
+});
+
+// Export empty object to make TypeScript happy
+export {};

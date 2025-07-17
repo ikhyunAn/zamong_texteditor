@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Zamong Text Editor - Story to Instagram',
-  description: 'Transform your stories into beautiful Instagram posts',
+  description: 'Transform your stories into beautiful Storycards',
 }
 
 export default function RootLayout({

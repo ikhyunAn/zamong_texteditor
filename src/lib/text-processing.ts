@@ -1,4 +1,4 @@
-import { StorySection } from '@/types';
+import { StorySection, Page } from '@/types';
 import { DEFAULT_TEXT_STYLE } from './constants';
 
 /**
@@ -146,4 +146,57 @@ export function parseContentWithBreaks(content: string): StorySection[] {
     content: cleanHtmlContent(sectionContent),
     textStyle: { ...DEFAULT_TEXT_STYLE }
   }));
+}
+
+/**
+ * Split content into pages based on line limit
+ */
+export function splitContentIntoPages(content: string, maxLinesPerPage: number = 25): Page[] {
+  if (!content.trim()) {
+    return [];
+  }
+
+  const cleanContent = cleanHtmlContent(content);
+  const lines = cleanContent.split('\n');
+  const pages: Page[] = [];
+  
+  let currentPageLines: string[] = [];
+  let pageIndex = 0;
+  
+  for (const line of lines) {
+    // Check if adding this line would exceed the limit
+    if (currentPageLines.length >= maxLinesPerPage) {
+      // Create a new page with current lines
+      pages.push({
+        id: `page-${pageIndex + 1}`,
+        content: currentPageLines.join('\n').trim(),
+        backgroundTemplate: undefined
+      });
+      
+      // Start a new page
+      currentPageLines = [line];
+      pageIndex++;
+    } else {
+      currentPageLines.push(line);
+    }
+  }
+  
+  // Add the last page if it has content
+  if (currentPageLines.length > 0) {
+    pages.push({
+      id: `page-${pageIndex + 1}`,
+      content: currentPageLines.join('\n').trim(),
+      backgroundTemplate: undefined
+    });
+  }
+  
+  return pages;
+}
+
+/**
+ * Estimate line count for given content
+ */
+export function estimateLineCount(content: string): number {
+  if (!content.trim()) return 0;
+  return cleanHtmlContent(content).split('\n').length;
 }

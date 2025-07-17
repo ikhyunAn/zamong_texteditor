@@ -13,7 +13,7 @@ interface ImageUploaderProps {
 
 export function ImageUploader({ onImageSelect, currentImage }: ImageUploaderProps) {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [dragActive, setDragActive] = useState(false);
+// Removed unused 'dragActive' state
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     acceptedFiles.forEach((file) => {

@@ -56,14 +56,14 @@ export function TextStyler({ textStyle, onStyleChange, onPositionChange }: TextS
           <div className="grid grid-cols-2 gap-2">
             {AVAILABLE_FONTS.map((font) => (
               <Button
-                key={font}
-                variant={textStyle.fontFamily === font ? 'default' : 'outline'}
+                key={font.name}
+                variant={textStyle.fontFamily === font.family ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => handleFontChange(font)}
+                onClick={() => handleFontChange(font.family)}
                 className="text-xs"
-                style={{ fontFamily: font }}
+                style={{ fontFamily: font.family }}
               >
-                {font}
+                {font.name}
               </Button>
             ))}
           </div>

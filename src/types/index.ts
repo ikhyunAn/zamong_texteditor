@@ -1,8 +1,8 @@
 export interface StorySection {
   id: string;
   content: string;
-  backgroundImage?: string;
   textStyle: TextStyle;
+  backgroundImage?: string;
 }
 
 export interface TextStyle {
@@ -23,16 +23,25 @@ export interface AuthorInfo {
   title: string;
 }
 
-export interface UnsplashImage {
+export interface Page {
   id: string;
-  urls: {
-    small: string;
-    regular: string;
-    full: string;
-  };
-  alt_description: string;
-  user: {
-    name: string;
+  content: string;
+  backgroundTemplate?: BackgroundTemplate;
+}
+
+export interface EditorSettings {
+  maxLinesPerPage: number;
+  fontFamily: string;
+}
+
+export interface BackgroundTemplate {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  color?: string;
+  gradient?: {
+    colors: string[];
+    direction: 'horizontal' | 'vertical' | 'diagonal';
   };
 }
 
@@ -40,7 +49,10 @@ export interface StoryState {
   authorInfo: AuthorInfo;
   content: string;
   sections: StorySection[];
+  pages: Page[];
   currentStep: number;
+  currentPageIndex: number;
+  editorSettings: EditorSettings;
 }
 
 export interface CanvasSettings {
