@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Canvas Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .instagram-canvas {
+            position: relative;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #f9fafb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            overflow: hidden;
+            min-height: 300px;
+            max-height: 500px;
+        }
+        .test-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e5f3ff;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        .resize-controls {
+            margin-bottom: 20px;
+        }
+        .resize-controls button {
+            margin: 5px;
+            padding: 8px 16px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .resize-controls button:hover {
+            background-color: #2563eb;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .canvas-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Responsive Canvas Scaling Test</h1>
+        
+        <div class="test-info">
+            <h3>Test Instructions:</h3>
+            <ul>
+                <li>✅ Canvas should be wrapped in a relative div with class <code>instagram-canvas</code></li>
+                <li>✅ Canvas should scale responsively based on container width</li>
+                <li>✅ Scale should be computed as <code>container.clientWidth / dimensions.width</code> (≤ 1)</li>
+                <li>✅ Canvas should use <code>setDimensions({ width: dimensions.width * scale, height: dimensions.height * scale }, { cssOnly: true })</code></li>
+                <li>✅ Canvas should use <code>setZoom(scale)</code></li>
+                <li>✅ Container should have Tailwind utilities: <code>max-w-full</code>, <code>h-auto</code>, <code>overflow-hidden</code></li>
+            </ul>
+        </div>
+
+        <div class="resize-controls">
+            <button onclick="resizeContainer(400)">Resize to 400px</button>
+            <button onclick="resizeContainer(600)">Resize to 600px</button>
+            <button onclick="resizeContainer(800)">Resize to 800px</button>
+            <button onclick="resizeContainer('100%')">Full Width</button>
+        </div>
+
+        <div class="grid-container">
+            <div>
+                <h3>Square Canvas (1080x1080)</h3>
+                <div class="instagram-canvas" id="square-container">
+                    <canvas id="square-canvas" style="border: 1px solid #ccc;"></canvas>
+                </div>
+                <div class="canvas-info" id="square-info">
+                    Original: 1080x1080 | Scaled: <span id="square-scaled">-</span> | Scale: <span id="square-scale">-</span>
+                </div>
+            </div>
+            
+            <div>
+                <h3>Portrait Canvas (1080x1350)</h3>
+                <div class="instagram-canvas" id="portrait-container">
+                    <canvas id="portrait-canvas" style="border: 1px solid #ccc;"></canvas>
+                </div>
+                <div class="canvas-info" id="portrait-info">
+                    Original: 1080x1350 | Scaled: <span id="portrait-scaled">-</span> | Scale: <span id="portrait-scale">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-info" style="margin-top: 20px;">
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li>Canvas should scale down proportionally when container width is less than 1080px</li>
+                <li>Canvas should never scale up beyond original dimensions (scale ≤ 1)</li>
+                <li>Canvas should maintain aspect ratio</li>
+                <li>Container should prevent overflow with proper containment</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Instagram dimensions
+        const INSTAGRAM_DIMENSIONS = {
+            SQUARE: { width: 1080, height: 1080 },
+            PORTRAIT: { width: 1080, height: 1350 }
+        };
+
+        // Mock fabric.js functionality for testing
+        class MockCanvas {
+            constructor(element, options) {
+                this.element = element;
+                this.width = options.width;
+                this.height = options.height;
+                this.element.width = this.width;
+                this.element.height = this.height;
+                this.zoom = 1;
+                this.update();
+            }
+
+            setDimensions(dimensions, options) {
+                if (options?.cssOnly) {
+                    this.element.style.width = dimensions.width + 'px';
+                    this.element.style.height = dimensions.height + 'px';
+                }
+                this.update();
+            }
+
+            setZoom(zoom) {
+                this.zoom = zoom;
+                this.update();
+            }
+
+            update() {
+                // Update display info
+                const type = this.width === 1080 && this.height === 1080 ? 'square' : 'portrait';
+                const scaledWidth = parseFloat(this.element.style.width || this.width);
+                const scaledHeight = parseFloat(this.element.style.height || this.height);
+                
+                document.getElementById(`${type}-scaled`).textContent = `${scaledWidth}x${scaledHeight}`;
+                document.getElementById(`${type}-scale`).textContent = this.zoom.toFixed(3);
+            }
+        }
+
+        // Apply responsive scaling function
+        function applyResponsiveScaling(canvas, container, originalWidth, originalHeight) {
+            if (!canvas || !container) return;
+            
+            const scale = Math.min(1, container.clientWidth / originalWidth);
+            canvas.setDimensions(
+                { width: originalWidth * scale, height: originalHeight * scale },
+                { cssOnly: true }
+            );
+            canvas.setZoom(scale);
+        }
+
+        // Initialize canvases
+        let squareCanvas, portraitCanvas;
+
+        function initializeCanvases() {
+            const squareElement = document.getElementById('square-canvas');
+            const portraitElement = document.getElementById('portrait-canvas');
+            
+            squareCanvas = new MockCanvas(squareElement, {
+                width: INSTAGRAM_DIMENSIONS.SQUARE.width,
+                height: INSTAGRAM_DIMENSIONS.SQUARE.height
+            });
+            
+            portraitCanvas = new MockCanvas(portraitElement, {
+                width: INSTAGRAM_DIMENSIONS.PORTRAIT.width,
+                height: INSTAGRAM_DIMENSIONS.PORTRAIT.height
+            });
+            
+            updateCanvasScaling();
+        }
+
+        function updateCanvasScaling() {
+            const squareContainer = document.getElementById('square-container');
+            const portraitContainer = document.getElementById('portrait-container');
+            
+            applyResponsiveScaling(
+                squareCanvas, 
+                squareContainer, 
+                INSTAGRAM_DIMENSIONS.SQUARE.width, 
+                INSTAGRAM_DIMENSIONS.SQUARE.height
+            );
+            
+            applyResponsiveScaling(
+                portraitCanvas, 
+                portraitContainer, 
+                INSTAGRAM_DIMENSIONS.PORTRAIT.width, 
+                INSTAGRAM_DIMENSIONS.PORTRAIT.height
+            );
+        }
+
+        function resizeContainer(width) {
+            const containers = document.querySelectorAll('.instagram-canvas');
+            containers.forEach(container => {
+                if (width === '100%') {
+                    container.style.width = '100%';
+                    container.style.maxWidth = '100%';
+                } else {
+                    container.style.width = width + 'px';
+                    container.style.maxWidth = width + 'px';
+                }
+            });
+            
+            // Update scaling after resize
+            setTimeout(updateCanvasScaling, 100);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeCanvases);
+        
+        // Handle window resize
+        window.addEventListener('resize', updateCanvasScaling);
+        
+        // ResizeObserver for container changes
+        if (window.ResizeObserver) {
+            const resizeObserver = new ResizeObserver(() => {
+                updateCanvasScaling();
+            });
+            
+            document.querySelectorAll('.instagram-canvas').forEach(container => {
+                resizeObserver.observe(container);
+            });
+        }
+    </script>
+</body>
+</html>
