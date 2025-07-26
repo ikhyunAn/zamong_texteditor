@@ -159,29 +159,28 @@ export function splitContentIntoPages(content: string, maxLinesPerPage: number =
   const cleanContent = cleanHtmlContent(content);
   const lines = cleanContent.split('\n');
   const pages: Page[] = [];
-  
+
   let currentPageLines: string[] = [];
   let pageIndex = 0;
-  
+
   for (const line of lines) {
-    // Check if adding this line would exceed the limit
+    // Check if adding this line would exceed the line limit
     if (currentPageLines.length >= maxLinesPerPage) {
-      // Create a new page with current lines
+      // Save the current page
       pages.push({
         id: `page-${pageIndex + 1}`,
         content: currentPageLines.join('\n').trim(),
         backgroundTemplate: undefined
       });
-      
-      // Start a new page
-      currentPageLines = [line];
+
+      // Prepare for the next page
+      currentPageLines = [];
       pageIndex++;
-    } else {
-      currentPageLines.push(line);
     }
+    currentPageLines.push(line);
   }
-  
-  // Add the last page if it has content
+
+  // Add any remaining lines as the last page
   if (currentPageLines.length > 0) {
     pages.push({
       id: `page-${pageIndex + 1}`,
@@ -189,7 +188,7 @@ export function splitContentIntoPages(content: string, maxLinesPerPage: number =
       backgroundTemplate: undefined
     });
   }
-  
+
   return pages;
 }
 
@@ -198,5 +197,23 @@ export function splitContentIntoPages(content: string, maxLinesPerPage: number =
  */
 export function estimateLineCount(content: string): number {
   if (!content.trim()) return 0;
-  return cleanHtmlContent(content).split('\n').length;
+  const cleanContent = cleanHtmlContent(content);
+  const lines = cleanContent.split('\n').filter(line => line.trim().length > 0);
+  return lines.length;
+}
+
+/**
+ * Get total line count across multiple pages
+ */
+export function getTotalLineCount(pages: Page[]): number {
+  return pages.reduce((total, page) => {
+    return total + estimateLineCount(page.content);
+  }, 0);
+}
+
+/**
+ * Get line count for a specific page
+ */
+export function getPageLineCount(page: Page): number {
+  return estimateLineCount(page.content);
 }

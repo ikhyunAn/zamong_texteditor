@@ -12,6 +12,12 @@ export const usePageManager = () => {
     setCurrentStep,
     setPages,
     setCurrentPageIndex,
+    addEmptyPage,
+    updatePage,
+    getCurrentPageContent,
+    setCurrentPageContent,
+    syncPagesToSections,
+    navigateToPage: storeNavigateToPage,
   } = useStoryStore();
 
   const [lineCounts, setLineCounts] = useState<Record<string, number>>({});
@@ -114,8 +120,8 @@ export const usePageManager = () => {
     }
   }, [sections, splitIntoPages, setPages]);
 
-  // Get current page content
-  const getCurrentPageContent = useCallback(() => {
+  // Get current page content (returns page object)
+  const getCurrentPage = useCallback(() => {
     if (pages.length > 0 && currentPageIndex < pages.length) {
       return pages[currentPageIndex];
     }
@@ -147,22 +153,55 @@ export const usePageManager = () => {
     return true;
   }, [content, sections, checkPageLimits, splitIntoPages, setPages]);
 
+  // Add a new empty page
+  const addNewPage = useCallback(() => {
+    addEmptyPage();
+    // Navigate to the new page
+    const newPageIndex = pages.length;
+    setTimeout(() => navigateToPage(newPageIndex), 100);
+  }, [addEmptyPage, pages.length, navigateToPage]);
+
+  // Update the current page content
+  const updateCurrentPageContent = useCallback((content: string) => {
+    setCurrentPageContent(content);
+    // Sync pages to sections after a brief delay to avoid excessive updates
+    setTimeout(() => syncPagesToSections(), 500);
+  }, [setCurrentPageContent, syncPagesToSections]);
+
+  // Enhanced navigation that ensures proper page loading
+  const navigateToPageWithSync = useCallback((pageIndex: number) => {
+    // First save current page content to ensure we don't lose changes
+    if (pages.length > 0 && currentPageIndex < pages.length) {
+      syncPagesToSections();
+    }
+    // Then navigate to the new page
+    storeNavigateToPage(pageIndex);
+  }, [storeNavigateToPage, syncPagesToSections, pages, currentPageIndex]);
+
   return {
     // Page data
     pages,
     currentPageIndex,
-    totalPages,
+    totalPages: Math.max(pages.length, totalPages),
     lineCounts,
     
     // Page navigation
-    navigateToPage,
-    getCurrentPageContent,
+    navigateToPage: navigateToPageWithSync,
+    getCurrentPageContent: getCurrentPage,
     getPageInfo,
     
-    // Page management
+    // Enhanced page management
+    addNewPage,
+    updateCurrentPageContent,
     autoPaginate,
     splitIntoPages,
     checkPageLimits,
+    
+    // Store functions
+    storeGetCurrentPageContent: getCurrentPageContent,
+    storeSetCurrentPageContent: setCurrentPageContent,
+    storeUpdatePage: updatePage,
+    syncPagesToSections,
     
     // Utility functions
     calculateLineCount,

@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useTransition, useDeferredValue } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
+import { usePageManager } from '@/hooks/usePageManager';
 import { AVAILABLE_FONTS, DEFAULT_TEXT_STYLE } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { debounce } from '@/lib/debounce';
+import EnhancedTextarea, { EnhancedTextareaRef } from '@/components/ui/enhanced-textarea';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -34,203 +36,161 @@ const FONT_SIZE = 18;
 const MAX_LINES_PER_PAGE = 40; // Calculated to fit within 1600px height with padding
 const CHARACTERS_PER_LINE = 50; // Average characters per line at 900px width
 
+// Font metrics cache to avoid recreating canvas contexts
+class FontMetricsCache {
+  private cache = new Map<string, CanvasRenderingContext2D>();
+  private measurementCache = new Map<string, number>();
+  
+  getContext(fontFamily: string): CanvasRenderingContext2D {
+    const fontKey = `${FONT_SIZE}px ${fontFamily}`;
+    
+    if (!this.cache.has(fontKey)) {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not create canvas context');
+      
+      context.font = fontKey;
+      this.cache.set(fontKey, context);
+    }
+    
+    return this.cache.get(fontKey)!;
+  }
+  
+  measureText(text: string, fontFamily: string): number {
+    const cacheKey = `${text}:${fontFamily}`;
+    
+    if (this.measurementCache.has(cacheKey)) {
+      return this.measurementCache.get(cacheKey)!;
+    }
+    
+    const context = this.getContext(fontFamily);
+    const width = context.measureText(text).width;
+    
+    // Limit cache size to prevent memory issues
+    if (this.measurementCache.size > 1000) {
+      // Clear oldest entries (simple LRU-like behavior)
+      const entries = Array.from(this.measurementCache.entries());
+      entries.slice(0, 500).forEach(([key]) => this.measurementCache.delete(key));
+    }
+    
+    this.measurementCache.set(cacheKey, width);
+    return width;
+  }
+  
+  clear() {
+    this.cache.clear();
+    this.measurementCache.clear();
+  }
+}
+
+// Global font metrics cache instance
+const fontMetricsCache = new FontMetricsCache();
+
+// Line calculation cache with memoization
+class LineCalculationCache {
+  private cache = new Map<string, number>();
+  
+  get(text: string, fontFamily: string, width: number): number | undefined {
+    const key = `${text}:${fontFamily}:${width}`;
+    return this.cache.get(key);
+  }
+  
+  set(text: string, fontFamily: string, width: number, lines: number): void {
+    const key = `${text}:${fontFamily}:${width}`;
+    
+    // Limit cache size to prevent memory issues
+    if (this.cache.size > 500) {
+      // Clear oldest entries (simple LRU-like behavior)
+      const entries = Array.from(this.cache.entries());
+      entries.slice(0, 250).forEach(([cacheKey]) => this.cache.delete(cacheKey));
+    }
+    
+    this.cache.set(key, lines);
+  }
+  
+  clear() {
+    this.cache.clear();
+  }
+}
+
+// Global line calculation cache instance
+const lineCalculationCache = new LineCalculationCache();
+
 const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) => {
-  const { content, setContent, editorSettings, sections, setSections, setCurrentStep } = useStoryStore();
-  const [pages, setPages] = useState<Page[]>([{ id: 'page-1', content: '', lineCount: 0 }]);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const { 
+    content, 
+    setContent, 
+    editorSettings, 
+    sections, 
+    setSections, 
+    setCurrentStep,
+    pages,
+    currentPageIndex,
+    getCurrentPageContent,
+    setCurrentPageContent,
+    addEmptyPage,
+    syncPagesToSections
+  } = useStoryStore();
+  
+  const {
+    totalPages,
+    getPageInfo,
+    checkPageLimits,
+    calculateLineCount: pageManagerCalculateLineCount,
+    navigateToPage,
+    addNewPage,
+    updateCurrentPageContent
+  } = usePageManager();
+  
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
   const [showLineWarning, setShowLineWarning] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  
+  // Initialize with an empty page if no pages exist
+  useEffect(() => {
+    if (pages.length === 0) {
+      addEmptyPage();
+    }
+  }, [pages.length, addEmptyPage]);
+  
+  // Clear caches when font changes
+  useEffect(() => {
+    fontMetricsCache.clear();
+    lineCalculationCache.clear();
+  }, [selectedFont]);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const textareaRefs = useRef<Map<string, EnhancedTextareaRef>>(new Map());
   
-  // Calculate lines for given text
-  const calculateLines = useCallback((text: string, width: number = PAGE_WIDTH - (PAGE_PADDING * 2)) => {
-    if (!text) return 0;
-    
-    // Create a temporary canvas to measure text
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return 0;
-    
-    context.font = `${FONT_SIZE}px ${selectedFont}`;
-    
-    const words = text.split(/\s+/);
-    let lines = 1;
-    let currentLine = '';
-    
-    // Account for newlines
-    const paragraphs = text.split('\n');
-    lines = paragraphs.length - 1; // Start with newline count
-    
-    paragraphs.forEach(paragraph => {
-      if (!paragraph) return; // Empty line counts as 1
-      
-      const words = paragraph.split(' ');
-      let currentLineText = '';
-      
-      words.forEach(word => {
-        const testLine = currentLineText ? `${currentLineText} ${word}` : word;
-        const metrics = context.measureText(testLine);
-        
-        if (metrics.width > width && currentLineText) {
-          lines++;
-          currentLineText = word;
-        } else {
-          currentLineText = testLine;
-        }
-      });
-      
-      if (currentLineText) lines++;
-    });
-    
-    return lines;
-  }, [selectedFont]);
+  // Get current page info from page manager
+  const pageInfo = getPageInfo();
+  const currentPageContent = getCurrentPageContent() || '';
+  const currentLines = pageManagerCalculateLineCount(currentPageContent);
+  const limitCheck = checkPageLimits();
   
-  // Debounced content processing
-  const processContent = useMemo(
-    () => debounce((text: string) => {
-      if (!text) {
-        setPages([{ id: 'page-1', content: '', lineCount: 0 }]);
-        return;
-      }
-      
-      const lines = text.split('\n');
-      const newPages: Page[] = [];
-      let currentPage: Page = { id: `page-${Date.now()}-1`, content: '', lineCount: 0 };
-      
-      lines.forEach((line, index) => {
-        const lineCount = line ? Math.ceil(line.length / CHARACTERS_PER_LINE) : 1;
-        
-        if (currentPage.lineCount + lineCount > MAX_LINES_PER_PAGE) {
-          // Save current page and start new one
-          newPages.push(currentPage);
-          currentPage = {
-            id: `page-${Date.now()}-${newPages.length + 1}`,
-            content: line,
-            lineCount: lineCount
-          };
-        } else {
-          // Add to current page
-          currentPage.content += (currentPage.content ? '\n' : '') + line;
-          currentPage.lineCount += lineCount;
-        }
-      });
-      
-      // Don't forget the last page
-      if (currentPage.content || newPages.length === 0) {
-        newPages.push(currentPage);
-      }
-      
-      setPages(newPages);
-      
-      // Update sections for export
-      const newSections = newPages.map((page, index) => ({
-        id: page.id,
-        content: page.content,
-        textStyle: sections[0]?.textStyle || DEFAULT_TEXT_STYLE,
-        backgroundImage: undefined
-      }));
-      
-      setSections(newSections);
-    }, 300),
-    [selectedFont, setSections, sections]
-  );
+  // Show warning when exceeding page limits
+  useEffect(() => {
+    setShowLineWarning(limitCheck.exceedsLimit);
+  }, [limitCheck.exceedsLimit]);
   
-  // Handle content changes
-  const handlePageContentChange = (pageIndex: number, newContent: string) => {
-    const updatedPages = [...pages];
-    const page = updatedPages[pageIndex];
-    
-    if (!page) return;
-    
-    const lines = calculateLines(newContent);
-    
-    if (lines > MAX_LINES_PER_PAGE) {
-      setShowLineWarning(true);
-      // Prevent further input if exceeding limit
-      return;
-    }
-    
-    setShowLineWarning(false);
-    page.content = newContent;
-    page.lineCount = lines;
-    
-    // Check if we need to create a new page
-    if (lines >= MAX_LINES_PER_PAGE - 5 && pageIndex === pages.length - 1) {
-      // User is near the limit on the last page, prepare a new page
-      updatedPages.push({
-        id: `page-${Date.now()}`,
-        content: '',
-        lineCount: 0
-      });
-    }
-    
-    setPages(updatedPages);
-    
-    // Update global content
-    const fullContent = updatedPages.map(p => p.content).join('\n[PAGE_BREAK]\n');
-    setContent(fullContent);
-    processContent(fullContent);
-  };
+  // Handle content changes using the unified page management system
+  const handlePageContentChange = useCallback((newContent: string) => {
+    updateCurrentPageContent(newContent);
+  }, [updateCurrentPageContent]);
   
   // Handle page focus to track current page
   const handlePageFocus = (index: number) => {
-    setCurrentPageIndex(index);
+    navigateToPage(index);
   };
   
-  // Handle Enter key to potentially create new page
-  const handleKeyDown = (e: React.KeyboardEvent, pageIndex: number) => {
-    const page = pages[pageIndex];
-    if (!page) return;
-    
-    // Check if we're at the line limit
-    if (page.lineCount >= MAX_LINES_PER_PAGE && e.key === 'Enter') {
-      e.preventDefault();
-      
-      // Create new page if this is the last page
-      if (pageIndex === pages.length - 1) {
-        const newPage: Page = {
-          id: `page-${Date.now()}`,
-          content: '',
-          lineCount: 0
-        };
-        setPages([...pages, newPage]);
-        
-        // Focus the new page
-        setTimeout(() => {
-          const newPageEl = pageRefs.current.get(newPage.id);
-          if (newPageEl) {
-            const textArea = newPageEl.querySelector('textarea');
-            textArea?.focus();
-          }
-        }, 100);
-      }
-    }
-  };
-  
-  // Scroll to page
-  const scrollToPage = (pageIndex: number) => {
-    const pageId = pages[pageIndex]?.id;
-    if (!pageId) return;
-    
-    const pageEl = pageRefs.current.get(pageId);
-    if (pageEl && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const pageRect = pageEl.getBoundingClientRect();
-      const scrollTop = pageRect.top - containerRect.top + containerRef.current.scrollTop;
-      
-      containerRef.current.scrollTo({
-        top: scrollTop - 20, // 20px padding
-        behavior: 'smooth'
+  // Scroll to current page when editor focuses
+  const scrollToEditor = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
       });
-    }
-  };
-  
-  // Initialize with content if exists
-  useEffect(() => {
-    if (content) {
-      processContent(content);
     }
   }, []);
   
@@ -268,6 +228,13 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
             <span>
               Lines: {pages[currentPageIndex]?.lineCount || 0}/{MAX_LINES_PER_PAGE}
             </span>
+            {/* Processing indicator */}
+            {isPending && (
+              <span className="flex items-center gap-1 text-blue-600">
+                <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </span>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -316,11 +283,20 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
                     backgroundPosition: `0 ${PAGE_PADDING}px`
                   }}
                 >
-                  <textarea
-                    value={page.content}
-                    onChange={(e) => handlePageContentChange(index, e.target.value)}
+                  <EnhancedTextarea
+                    ref={(ref) => {
+                      if (ref) textareaRefs.current.set(page.id, ref);
+                    }}
+                    value={index === currentPageIndex ? currentPageContent : page.content}
+                    onChange={(e) => {
+                      if (index === currentPageIndex) {
+                        handlePageContentChange(e.target.value);
+                      }
+                    }}
                     onFocus={() => handlePageFocus(index)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    autosize={false} // Disable autosize since we have fixed page height
+                    preserveCursor={true}
+                    smoothTyping={true}
                     className="w-full h-full resize-none outline-none bg-transparent"
                     style={{
                       padding: `${PAGE_PADDING}px`,
@@ -346,19 +322,14 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
             ))}
             
             {/* Add Page Button */}
-            {pages[pages.length - 1]?.content && (
+            {pages.length < 6 && (
               <div className="mx-auto" style={{ width: `${PAGE_WIDTH}px` }}>
                 <Button
                   variant="outline"
                   className="w-full h-32 border-2 border-dashed border-gray-300 hover:border-gray-400"
                   onClick={() => {
-                    const newPage: Page = {
-                      id: `page-${Date.now()}`,
-                      content: '',
-                      lineCount: 0
-                    };
-                    setPages([...pages, newPage]);
-                    setTimeout(() => scrollToPage(pages.length), 100);
+                    addNewPage();
+                    scrollToEditor();
                   }}
                 >
                   <Plus className="w-6 h-6 mr-2" />
@@ -369,23 +340,74 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
           </div>
         </div>
         
-        {/* Quick Navigation */}
-        {pages.length > 1 && (
-          <div className="mt-4 flex justify-center gap-2">
-            {pages.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => scrollToPage(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentPageIndex 
-                    ? 'bg-blue-500 w-8' 
-                    : 'bg-gray-300 hover:bg-gray-400'
-                }`}
-                title={`Go to page ${index + 1}`}
-              />
-            ))}
+        {/* Enhanced Page Navigation */}
+        <div className="mt-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 shadow-inner">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="default"
+                disabled={!pageInfo.hasPreviousPage}
+                onClick={() => {
+                  navigateToPage(pageInfo.currentPage - 2);
+                  scrollToEditor();
+                }}
+                className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous Page
+              </Button>
+              
+              {/* Page Indicators */}
+              <div className="flex items-center gap-1 max-w-[300px]">
+                {Array.from({ length: Math.min(pageInfo.totalPages, 6) }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      navigateToPage(i);
+                      scrollToEditor();
+                    }}
+                    className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 hover:scale-110 ${
+                      pageInfo.currentPage === i + 1
+                        ? 'bg-blue-500 text-white shadow-lg'
+                        : 'bg-white text-gray-600 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="default"
+                disabled={!pageInfo.hasNextPage}
+                onClick={() => {
+                  navigateToPage(pageInfo.currentPage);
+                  scrollToEditor();
+                }}
+                className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                Next Page
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+            
+            {/* Page Info */}
+            <div className="text-center sm:text-right">
+              <div className="text-lg font-medium text-gray-800">
+                Page {pageInfo.currentPage} of {Math.min(pageInfo.totalPages, 6)}
+              </div>
+              {pageInfo.totalPages > 6 && (
+                <div className="text-sm text-red-600 flex items-center justify-center sm:justify-end gap-1 mt-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {pageInfo.totalPages - 6} pages over limit
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

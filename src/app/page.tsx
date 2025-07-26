@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
 import { AuthorInfoForm } from '@/components/layout/AuthorInfoForm';
-import { PagedDocumentEditorWithNavigation } from '@/components/editor/PagedDocumentEditor';
+import PaginatedEditorWithNavigation from '@/components/editor/PaginatedEditor';
 import { BatchImageGenerator } from '@/components/canvas/BatchImageGenerator';
 // import { ProgressStepper } from '@/components/layout/ProgressStepper';
 import { useToast } from '@/hooks/useToast';
@@ -58,7 +58,7 @@ function HomeContent() {
       case 0:
         return <AuthorInfoForm />;
       case 1:
-        return <PagedDocumentEditorWithNavigation />;
+        return <PaginatedEditorWithNavigation />;
       case 2:
         return <BatchImageGenerator />;
       default:

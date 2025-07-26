@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
-import Document from '@tiptap/extension-document';
-import Bold from '@tiptap/extension-bold';
-import Italic from '@tiptap/extension-italic';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
+import HardBreak from '@tiptap/extension-hard-break';
 import { useInView } from 'react-intersection-observer';
 import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
@@ -29,20 +29,43 @@ interface PaginatedEditorProps {
   className?: string;
 }
 
+// Page styling constants
+const PAGE_WIDTH = 900;
+const PAGE_HEIGHT = 1600;
+const PAGE_PADDING = 60;
+const LINE_HEIGHT = 32;
+const FONT_SIZE = 18;
+
 const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
-  const { content, setContent, editorSettings, sections, setCurrentStep } = useStoryStore();
+  const { 
+    content, 
+    setContent, 
+    editorSettings, 
+    sections, 
+    setCurrentStep, 
+    pages, 
+    currentPageIndex,
+    getCurrentPageContent,
+    setCurrentPageContent,
+    addEmptyPage 
+  } = useStoryStore();
   const { 
     totalPages, 
     getPageInfo, 
     checkPageLimits, 
     calculateLineCount,
     autoPaginate,
-    navigateToPage 
+    navigateToPage,
+    addNewPage,
+    updateCurrentPageContent,
+    storeGetCurrentPageContent,
+    syncPagesToSections
   } = usePageManager();
   
   const [currentLines, setCurrentLines] = useState(0);
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
   const [pageExceedsLimit, setPageExceedsLimit] = useState(false);
+  const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
   const { ref: pageBreakRef, inView } = useInView({ threshold: 0.5 });
   
@@ -69,43 +92,58 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, []);
 
+  // Initialize with an empty page if no pages exist
+  useEffect(() => {
+    if (pages.length === 0) {
+      addEmptyPage();
+    }
+  }, [pages.length, addEmptyPage]);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Document,
-      Bold,
-      Italic,
       CharacterCount.configure({
-        limit: editorSettings.maxLinesPerPage * 80, // Adjusted for better estimation
+        limit: editorSettings.maxLinesPerPage * 80,
       }),
     ],
-    content: content || '',
+    content: getCurrentPageContent() || '',
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setContent(html);
-      
-      // Calculate current line count with debounce
-      const plainText = editor.getText();
-      debouncedCalculateLineCount(plainText);
-      
-      // Check if content exceeds page limits
-      const limitCheck = checkPageLimits();
-      setPageExceedsLimit(limitCheck.exceedsLimit);
+      // Re-enabled with safeguards: Update current page content when editor changes
+      const newContent = editor.getText();
+      // Only update if there's actually new content to prevent infinite loops
+      if (newContent !== getCurrentPageContent()) {
+        updateCurrentPageContent(newContent);
+        // Update line count with debouncing
+        debouncedCalculateLineCount(newContent);
+      }
     },
     editorProps: {
       attributes: {
-        class: `prose prose-sm max-w-none focus:outline-none p-6 min-h-[400px] max-h-[500px] overflow-y-auto`,
-        style: `font-family: ${selectedFont}; line-height: 1.6;`,
+        class: `w-full h-full resize-none outline-none bg-transparent`,
+        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${FONT_SIZE}px; line-height: ${LINE_HEIGHT}px; color: #333;`,
+        contenteditable: 'true',
       },
     },
   });
-  
-  // Auto-paginate when content changes
+
+  // Re-enabled content synchronization with safeguards
   useEffect(() => {
-    if (sections.length > 0) {
-      autoPaginate();
+    if (editor && pages.length > 0) {
+      const currentPageContent = getCurrentPageContent() || '';
+      const currentEditorContent = editor.getText();
+      
+      // Only update if the content is different to avoid infinite loops
+      // Also check if editor is focused to prevent interrupting user typing
+      if (currentPageContent !== currentEditorContent && !editor.isFocused) {
+        // Use setTimeout to prevent immediate re-render conflicts
+        setTimeout(() => {
+          if (editor && !editor.isDestroyed) {
+            editor.commands.setContent(currentPageContent || '<p></p>');
+          }
+        }, 0);
+      }
     }
-  }, [sections, autoPaginate]);
+  }, [editor, currentPageIndex, pages, getCurrentPageContent]);
 
   // Handle font change
   const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -119,33 +157,65 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   };
 
-  // Handle page break insertion
+  // Handle page break insertion - creates new page by splitting content at cursor
   const insertPageBreak = () => {
-    if (editor && pageInfo.currentPage < 6) {
-      // Insert a unique page break marker
-      editor.commands.insertContent('\n[PAGE_BREAK]\n');
-      
-      // Force content update to trigger page recalculation
-      const html = editor.getHTML();
-      setContent(html);
-      
-      // Split content into sections based on page breaks
-      const plainText = editor.getText();
-      const contentSections = plainText.split('[PAGE_BREAK]').filter(s => s.trim());
-      
-      // Update sections in store
-      const newSections = contentSections.map((sectionContent, index) => ({
-        id: `section-${Date.now()}-${index}`,
-        content: sectionContent.trim(),
-        textStyle: sections[0]?.textStyle || DEFAULT_TEXT_STYLE,
-        backgroundImage: undefined
-      }));
-      
-      // Update the store with new sections
-      if (newSections.length > 0) {
-        useStoryStore.getState().setSections(newSections);
-      }
+    // Clear any existing message
+    setPageBreakMessage('');
+    
+    if (!editor) {
+      setPageBreakMessage('Editor is not ready. Please try again.');
+      return;
     }
+    
+    if (pageInfo.currentPage >= 6) {
+      setPageBreakMessage('Cannot insert page break. Maximum of 6 pages allowed.');
+      return;
+    }
+    
+    const currentContent = editor.getText();
+    
+    // Check if there's any content to split
+    if (!currentContent.trim()) {
+      setPageBreakMessage('Cannot insert page break on empty page. Add some content first.');
+      setTimeout(() => setPageBreakMessage(''), 3000);
+      return;
+    }
+    
+    // Get current content and cursor position
+    const { from, to } = editor.state.selection;
+    
+    // Split content at cursor position
+    const beforeCursor = currentContent.substring(0, from);
+    const afterCursor = currentContent.substring(to);
+    
+    // Show success message
+    setPageBreakMessage('Page break inserted successfully!');
+    setTimeout(() => setPageBreakMessage(''), 2000);
+    
+    // Update current page with content before cursor
+    if (beforeCursor.trim()) {
+      updateCurrentPageContent(beforeCursor.trim());
+      // Set editor content to match
+      editor.commands.setContent(beforeCursor.trim());
+    } else {
+      // If no content before cursor, keep current page as is
+      updateCurrentPageContent('');
+      editor.commands.setContent('');
+    }
+    
+    // Create new page with content after cursor (if any)
+    setTimeout(() => {
+      addNewPage();
+      // After new page is created, set its content if there was content after cursor
+      if (afterCursor.trim()) {
+        setTimeout(() => {
+          updateCurrentPageContent(afterCursor.trim());
+          if (editor && !editor.isDestroyed) {
+            editor.commands.setContent(afterCursor.trim());
+          }
+        }, 100);
+      }
+    }, 50);
   };
 
   if (!editor) {
@@ -195,6 +265,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           >
             Insert Page Break
           </Button>
+          
+          {/* Add New Page Button */}
+          <Button 
+            onClick={addNewPage}
+            disabled={pages.length >= 6}
+            size="sm"
+            variant="default"
+          >
+            Add New Page
+          </Button>
         </div>
       </CardHeader>
       
@@ -217,6 +297,24 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             <div className="text-sm text-yellow-700">
               <p className="font-medium">Page line limit exceeded</p>
               <p>Current: {currentLines} lines (max: {editorSettings.maxLinesPerPage})</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Page Break Message */}
+        {pageBreakMessage && (
+          <div className={`flex items-center gap-2 p-3 rounded-md ${
+            pageBreakMessage.includes('successfully') 
+              ? 'bg-green-50 border border-green-200' 
+              : 'bg-orange-50 border border-orange-200'
+          }`}>
+            <AlertCircle className={`w-5 h-5 ${
+              pageBreakMessage.includes('successfully') ? 'text-green-600' : 'text-orange-600'
+            }`} />
+            <div className={`text-sm ${
+              pageBreakMessage.includes('successfully') ? 'text-green-700' : 'text-orange-700'
+            }`}>
+              <p>{pageBreakMessage}</p>
             </div>
           </div>
         )}
@@ -252,36 +350,59 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           </div>
         </div>
 
-        {/* Editor Content */}
+        {/* Pages Container */}
         <div 
           ref={editorRef}
-          className="border rounded-md bg-white shadow-sm relative"
-          style={{ fontFamily: selectedFont }}
+          className="overflow-y-auto overflow-x-hidden"
+          style={{ maxHeight: '80vh' }}
         >
-          <EditorContent editor={editor} />
-          
-          {/* Visual Page Separator */}
-          {sections.length > 1 && currentSectionIndex < sections.length - 1 && (
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-100 to-transparent pointer-events-none">
-              <div className="absolute bottom-0 left-0 right-0 border-b-4 border-dashed border-blue-400 opacity-50" />
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full">
-                Page {currentSectionIndex + 1} ends here
+          <div className="space-y-8 pb-8">
+            <div
+              className="mx-auto"
+              style={{ width: `${PAGE_WIDTH}px` }}
+            >
+              {/* Page Number */}
+              <div className="text-center text-sm text-gray-500 mb-2">
+                Page {pageInfo.currentPage}
+              </div>
+
+              {/* Page Container */}
+              <div 
+                className="relative bg-white border-2 border-gray-300 shadow-lg rounded-lg overflow-hidden"
+                style={{
+                  width: `${PAGE_WIDTH}px`,
+                  height: `${PAGE_HEIGHT}px`,
+                  backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, #f0f0f0 31px, #f0f0f0 32px)',
+                  backgroundSize: '100% 32px',
+                  backgroundPosition: `0 ${PAGE_PADDING}px`
+                }}
+              >
+                <style>{`
+                  .ProseMirror {
+                    white-space: pre-wrap;
+                  }
+                  .ProseMirror p {
+                    margin: 0;
+                    line-height: ${LINE_HEIGHT}px;
+                  }
+                  .ProseMirror p + p {
+                    margin-top: ${LINE_HEIGHT}px;
+                  }
+                `}</style>
+                <EditorContent editor={editor} />
+                
+                {/* Line count indicator */}
+                <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                  {currentLines}/{editorSettings.maxLinesPerPage} lines
+                </div>
+
+                {/* Visual indicator when approaching limit */}
+                {currentLines > editorSettings.maxLinesPerPage - 5 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-yellow-200 to-transparent opacity-50" />
+                )}
               </div>
             </div>
-          )}
-          
-          {/* Page Break Indicator */}
-          {currentLines > editorSettings.maxLinesPerPage * 0.8 && (
-            <div ref={pageBreakRef} className="border-t-2 border-dashed border-orange-400 p-3 text-center bg-orange-50 animate-pulse">
-              <div className="text-sm font-medium text-orange-700">
-                <AlertCircle className="w-4 h-4 inline-block mr-1" />
-                Approaching page limit - consider a page break
-              </div>
-              <div className="text-xs text-orange-600 mt-1">
-                {remainingLines} lines remaining
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Enhanced Page Navigation */}
@@ -452,5 +573,6 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
   );
 };
 
+export { PaginatedEditor, PaginatedEditorWithNavigation };
 export default PaginatedEditorWithNavigation;
 

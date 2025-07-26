@@ -18,8 +18,13 @@ interface StoryStore extends StoryState {
   setPages: (pages: Page[]) => void;
   setCurrentPageIndex: (index: number) => void;
   navigateToPage: (index: number) => void;
-  addPage: (content: string) => void;
+  addPage: (content?: string) => void;
+  addEmptyPage: () => void;
   updatePage: (pageId: string, content: string) => void;
+  deletePage: (pageId: string) => void;
+  getCurrentPageContent: () => string;
+  setCurrentPageContent: (content: string) => void;
+  syncPagesToSections: () => void;
   splitContentIntoPages: (content: string) => void;
   
   // Editor settings actions
@@ -59,22 +64,9 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
   },
 
   setContent: (content: string) => {
-    set({ content });
-    // Auto-generate pages and sections when content changes
-    if (content.trim()) {
-      get().splitContentIntoPages(content);
-      // Parse HTML content into sections intelligently
-      const sectionTexts = parseHtmlToSections(content);
-      const sections = sectionTexts.map((text, index) => ({
-        id: `section-${index + 1}`,
-        content: text.trim(),
-        textStyle: { ...defaultTextStyle },
-        backgroundImage: undefined
-      }));
-      set({ sections });
-    } else {
-      set({ pages: [], sections: [] });
-    }
+    // Simply set the content without auto-processing into pages
+    // Individual page management will be handled separately
+    set({ content: content.trim() });
   },
 
   setCurrentStep: (step: number) => {
@@ -120,15 +112,19 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     get().setCurrentPageIndex(index);
   },
 
-  addPage: (content: string) => {
+  addPage: (content?: string) => {
     const { pages } = get();
     const newPage: Page = {
-      id: `page-${pages.length + 1}`,
-      content: content.trim(),
+      id: `page-${Date.now()}-${pages.length + 1}`,
+      content: content ? content.trim() : '',
       backgroundTemplate: undefined
     };
     
     set({ pages: [...pages, newPage] });
+  },
+
+  addEmptyPage: () => {
+    get().addPage('');
   },
 
   updatePage: (pageId: string, content: string) => {
@@ -137,6 +133,52 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
         page.id === pageId ? { ...page, content: content.trim() } : page
       )
     }));
+  },
+
+  deletePage: (pageId: string) => {
+    set((state) => {
+      const newPages = state.pages.filter(page => page.id !== pageId);
+      const newCurrentPageIndex = Math.min(state.currentPageIndex, Math.max(0, newPages.length - 1));
+      return {
+        pages: newPages,
+        currentPageIndex: newCurrentPageIndex
+      };
+    });
+  },
+
+  getCurrentPageContent: () => {
+    const { pages, currentPageIndex } = get();
+    if (pages.length > 0 && currentPageIndex < pages.length) {
+      return pages[currentPageIndex].content;
+    }
+    return '';
+  },
+
+  setCurrentPageContent: (content: string) => {
+    const { pages, currentPageIndex } = get();
+    if (pages.length > 0 && currentPageIndex >= 0 && currentPageIndex < pages.length) {
+      const currentPage = pages[currentPageIndex];
+      // Only update if content actually changed to avoid unnecessary re-renders
+      if (currentPage.content !== content.trim()) {
+        get().updatePage(currentPage.id, content);
+      }
+    }
+  },
+
+  syncPagesToSections: () => {
+    const { pages } = get();
+    const sections = pages.map((page, index) => ({
+      id: page.id.replace('page-', 'section-'),
+      content: page.content,
+      textStyle: { ...defaultTextStyle },
+      backgroundImage: undefined
+    }));
+    
+    set({ sections });
+    
+    // Update global content to be the concatenation of all pages
+    const globalContent = pages.map(page => page.content).join('\n\n');
+    set({ content: globalContent });
   },
 
   splitContentIntoPages: (content: string) => {

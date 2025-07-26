@@ -1,0 +1,61 @@
+/* Enhanced Textarea Styles */
+.enhanced-textarea {
+  /* Base styles */
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  
+  /* Smooth transitions */
+  transition: height 0.1s ease-out;
+  
+  /* Remove default textarea styles */
+  box-shadow: none;
+  resize: none;
+  
+  /* Ensure proper text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  
+  /* Better scrollbar styling for webkit browsers */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 transparent;
+}
+
+.enhanced-textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.enhanced-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.enhanced-textarea::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 3px;
+}
+
+.enhanced-textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Focus states */
+.enhanced-textarea:focus {
+  outline: none;
+}
+
+/* Disable default browser spell check styling */
+.enhanced-textarea::-webkit-input-placeholder {
+  -webkit-text-security: none;
+}
+
+/* Prevent text selection on placeholder */
+.enhanced-textarea::placeholder {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
