@@ -27,14 +27,36 @@ export const usePageManager = () => {
   const calculateLineCount = useCallback((content: string): number => {
     if (!content) return 0;
     
-    const avgCharPerLine = 60; // Average characters per line
-    const lines = Math.ceil(content.length / avgCharPerLine);
+    // Clean HTML content and count actual lines
+    const cleanContent = content
+      .replace(/<\/p>\s*<p>/gi, '\n\n') // Convert paragraph breaks to double newlines
+      .replace(/<br\s*\/?>/gi, '\n') // Convert <br> tags to single newlines
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Convert non-breaking spaces
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
     
-    // Count explicit line breaks
-    const explicitBreaks = (content.match(/\n/g) || []).length;
+    // Split by actual line breaks and count non-empty lines
+    const lines = cleanContent.split('\n');
+    let lineCount = 0;
     
-    // Add explicit line breaks as additional lines
-    return lines + explicitBreaks;
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.length > 0) {
+        // Calculate how many visual lines this text content will take
+        const avgCharPerLine = 60; // Average characters per line based on font size and page width
+        const visualLines = Math.max(1, Math.ceil(trimmedLine.length / avgCharPerLine));
+        lineCount += visualLines;
+      } else {
+        // Empty lines still count as one line
+        lineCount += 1;
+      }
+    }
+    
+    return lineCount;
   }, []);
 
   // Split content into pages based on line limits

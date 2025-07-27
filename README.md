@@ -70,6 +70,17 @@ A Next.js application that transforms your stories, poems, and essays into beaut
 - Use the rich text editor to write your content
 - Apply formatting (bold, italic) as needed
 - The editor supports paragraphs and line breaks
+- **Page Management Features:**
+  - **Automatic pagination**: Content automatically splits into pages when reaching line limits
+  - **Manual page breaks**: Insert page breaks at any position using the "Insert Page Break" button or `Ctrl+Enter`
+  - **Page navigation**: Use Previous/Next buttons or click page numbers to navigate
+  - **Keyboard shortcuts**: 
+    - `Ctrl+←`: Previous page
+    - `Ctrl+→`: Next page  
+    - `Ctrl+Enter`: Insert page break at cursor position
+    - `Ctrl+Shift+N`: Add new empty page
+  - **Visual indicators**: Real-time line count, page limits, and content warnings
+  - **Line break preservation**: All line breaks and paragraph formatting are preserved during page operations
 
 ### Step 3: Manage Sections
 - Review automatically suggested section breaks

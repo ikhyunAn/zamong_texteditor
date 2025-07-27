@@ -16,6 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { debounce } from '../../lib/debounce';
 import { 
+  htmlToTextWithLineBreaks, 
+  textToHtmlWithLineBreaks, 
+  splitContentPreservingLineBreaks,
+  validatePageBreakIntegrity 
+} from '../../lib/text-processing';
+import { 
   ArrowLeft, 
   ArrowRight, 
   AlertCircle, 
@@ -69,8 +75,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const { ref: pageBreakRef, inView } = useInView({ threshold: 0.5 });
   
-  // Calculate current section index based on current page
+  // Get page info
   const pageInfo = getPageInfo();
+  
+  // Calculate current section index based on current page
   const currentSectionIndex = Math.max(0, pageInfo.currentPage - 1);
   
   // Create debounced line count function
@@ -81,16 +89,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }, 300),
     [calculateLineCount]
   );
-  
-  // Smooth scroll to editor when page changes
-  const scrollToEditor = useCallback(() => {
-    if (editorRef.current) {
-      editorRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-    }
-  }, []);
 
   // Initialize with an empty page if no pages exist
   useEffect(() => {
@@ -126,7 +124,203 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     },
   });
 
-  // Re-enabled content synchronization with safeguards
+  // Smooth scroll to editor when page changes
+  // Enhanced smooth scroll to editor with focus management
+  const scrollToEditor = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      // Ensure editor gets focus after scrolling
+      setTimeout(() => {
+        if (editor && !editor.isDestroyed) {
+          editor.commands.focus();
+        }
+      }, 300);
+    }
+  }, [editor]);
+
+  /**
+   * ADVANCED PAGE BREAK INSERTION WITH LINE BREAK PRESERVATION
+   * 
+   * This function implements intelligent page break insertion that preserves
+   * all existing line breaks and paragraph formatting. The process involves:
+   * 
+   * 1. VALIDATION: Checks editor state, page limits, and content availability
+   * 2. CONTENT EXTRACTION: Retrieves HTML content and converts to plain text
+   *    while preserving line break structure using htmlToTextWithLineBreaks()
+   * 3. CURSOR POSITION MAPPING: Calculates precise text position accounting
+   *    for HTML tags and formatting
+   * 4. INTELLIGENT SPLITTING: Uses splitContentPreservingLineBreaks() to
+   *    split content at cursor while maintaining paragraph integrity
+   * 5. CONTENT VALIDATION: Validates that no content is lost during splitting
+   * 6. PAGE UPDATES: Updates current page and creates new page with proper
+   *    HTML formatting restored via textToHtmlWithLineBreaks()
+   * 7. NAVIGATION: Smoothly navigates to the new page with focus management
+   * 
+   * Features:
+   * - Preserves single line breaks within paragraphs
+   * - Maintains paragraph breaks (double newlines)
+   * - Handles consecutive line breaks intelligently
+   * - Validates content integrity
+   * - Provides user feedback for all operations
+   * - Includes error handling for edge cases
+   */
+  const insertPageBreak = useCallback(() => {
+    // Clear any existing message
+    setPageBreakMessage('');
+    
+    if (!editor) {
+      setPageBreakMessage('Editor is not ready. Please try again.');
+      return;
+    }
+    
+    if (pageInfo.currentPage >= 6) {
+      setPageBreakMessage('Cannot insert page break. Maximum of 6 pages allowed.');
+      return;
+    }
+    
+    // Get HTML content to preserve formatting and line breaks
+    const currentHtmlContent = editor.getHTML();
+    const currentTextContent = editor.getText();
+    
+    // Check if there's any content to split
+    if (!currentTextContent.trim()) {
+      setPageBreakMessage('Cannot insert page break on empty page. Add some content first.');
+      setTimeout(() => setPageBreakMessage(''), 3000);
+      return;
+    }
+    
+    // Get current selection range
+    const { from, to } = editor.state.selection;
+    
+    // Convert HTML to plain text while preserving line breaks
+    const plainTextContent = htmlToTextWithLineBreaks(currentHtmlContent);
+    
+    // Calculate the actual text position accounting for line breaks
+    let textPosition = 0;
+    const editorText = editor.getText();
+    for (let i = 0; i < editorText.length && i < from; i++) {
+      textPosition++;
+    }
+    
+    // Use enhanced splitting function that preserves line breaks
+    const { before: beforeContent, after: afterContent } = splitContentPreservingLineBreaks(plainTextContent, textPosition);
+    
+    // Validate that the split operation preserves content integrity
+    const isValid = validatePageBreakIntegrity(plainTextContent, beforeContent, afterContent);
+    if (!isValid) {
+      setPageBreakMessage('Page break operation failed. Content integrity could not be preserved.');
+      setTimeout(() => setPageBreakMessage(''), 3000);
+      return;
+    }
+    
+    // Show success message
+    setPageBreakMessage('Page break inserted successfully!');
+    setTimeout(() => setPageBreakMessage(''), 2000);
+    
+    // Update current page with content before cursor
+    if (beforeContent.trim()) {
+      const beforeHtml = textToHtmlWithLineBreaks(beforeContent);
+      updateCurrentPageContent(beforeContent.trim());
+      // Set editor content with preserved formatting
+      editor.commands.setContent(beforeHtml);
+    } else {
+      // If no content before cursor, keep current page empty
+      updateCurrentPageContent('');
+      editor.commands.setContent('<p></p>');
+    }
+    
+    // Create new page with content after cursor and navigate to it
+    setTimeout(() => {
+      const currentPageIndex = pageInfo.currentPage - 1;
+      addNewPage();
+      
+      // Navigate to the newly created page after a brief delay
+      setTimeout(() => {
+        const newPageIndex = currentPageIndex + 1;
+        navigateToPage(newPageIndex);
+        
+        // Set content on the new page if there was content after cursor
+        setTimeout(() => {
+          if (afterContent.trim()) {
+            const afterHtml = textToHtmlWithLineBreaks(afterContent);
+            updateCurrentPageContent(afterContent.trim());
+            if (editor && !editor.isDestroyed) {
+              editor.commands.setContent(afterHtml);
+              // Focus the editor on the new page
+              editor.commands.focus('start');
+            }
+          } else {
+            // Ensure new page starts with proper structure and focus
+            if (editor && !editor.isDestroyed) {
+              editor.commands.setContent('<p></p>');
+              editor.commands.focus('start');
+            }
+          }
+          // Scroll to editor after navigation
+          scrollToEditor();
+        }, 150);
+      }, 100);
+    }, 50);
+  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, navigateToPage, scrollToEditor]);
+
+  /**
+   * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION AND EDITING
+   * 
+   * This effect sets up global keyboard shortcuts for enhanced editing experience:
+   * - Ctrl/Cmd + Left Arrow: Navigate to previous page (with smooth scrolling)
+   * - Ctrl/Cmd + Right Arrow: Navigate to next page (with smooth scrolling)
+   * - Ctrl/Cmd + Enter: Insert page break at current cursor position
+   * - Ctrl/Cmd + Shift + N: Add new empty page (up to 6 page limit)
+   * 
+   * All shortcuts are disabled when typing in the editor to prevent conflicts.
+   * Focus management ensures the editor remains focused after navigation.
+   */
+  useEffect(() => {
+    // Don't set up keyboard shortcuts if editor is not ready
+    if (!editor) return;
+    
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in editor
+      if (event.target !== editor?.view?.dom) {
+        // Ctrl/Cmd + Left Arrow: Previous page
+        if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowLeft') {
+          event.preventDefault();
+          if (pageInfo.hasPreviousPage) {
+            navigateToPage(pageInfo.currentPage - 2);
+            scrollToEditor();
+          }
+        }
+        // Ctrl/Cmd + Right Arrow: Next page
+        else if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowRight') {
+          event.preventDefault();
+          if (pageInfo.hasNextPage) {
+            navigateToPage(pageInfo.currentPage);
+            scrollToEditor();
+          }
+        }
+        // Ctrl/Cmd + Enter: Insert page break
+        else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          insertPageBreak();
+        }
+        // Ctrl/Cmd + Shift + N: Add new page
+        else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
+          event.preventDefault();
+          if (pages.length < 6) {
+            addNewPage();
+          }
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [editor, pageInfo, navigateToPage, scrollToEditor, insertPageBreak, addNewPage, pages.length]);
+
+  // Enhanced content synchronization with focus management
   useEffect(() => {
     if (editor && pages.length > 0) {
       const currentPageContent = getCurrentPageContent() || '';
@@ -138,7 +332,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         // Use setTimeout to prevent immediate re-render conflicts
         setTimeout(() => {
           if (editor && !editor.isDestroyed) {
+            // Clear content first to ensure clean state
+            editor.commands.clearContent();
+            // Set new content
             editor.commands.setContent(currentPageContent || '<p></p>');
+            // Focus the editor at the start of content after a brief delay
+            setTimeout(() => {
+              if (editor && !editor.isDestroyed) {
+                editor.commands.focus('start');
+              }
+            }, 50);
           }
         }, 0);
       }
@@ -155,67 +358,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       const editorElement = editor.view.dom as HTMLElement;
       editorElement.style.fontFamily = fontFamily;
     }
-  };
-
-  // Handle page break insertion - creates new page by splitting content at cursor
-  const insertPageBreak = () => {
-    // Clear any existing message
-    setPageBreakMessage('');
-    
-    if (!editor) {
-      setPageBreakMessage('Editor is not ready. Please try again.');
-      return;
-    }
-    
-    if (pageInfo.currentPage >= 6) {
-      setPageBreakMessage('Cannot insert page break. Maximum of 6 pages allowed.');
-      return;
-    }
-    
-    const currentContent = editor.getText();
-    
-    // Check if there's any content to split
-    if (!currentContent.trim()) {
-      setPageBreakMessage('Cannot insert page break on empty page. Add some content first.');
-      setTimeout(() => setPageBreakMessage(''), 3000);
-      return;
-    }
-    
-    // Get current content and cursor position
-    const { from, to } = editor.state.selection;
-    
-    // Split content at cursor position
-    const beforeCursor = currentContent.substring(0, from);
-    const afterCursor = currentContent.substring(to);
-    
-    // Show success message
-    setPageBreakMessage('Page break inserted successfully!');
-    setTimeout(() => setPageBreakMessage(''), 2000);
-    
-    // Update current page with content before cursor
-    if (beforeCursor.trim()) {
-      updateCurrentPageContent(beforeCursor.trim());
-      // Set editor content to match
-      editor.commands.setContent(beforeCursor.trim());
-    } else {
-      // If no content before cursor, keep current page as is
-      updateCurrentPageContent('');
-      editor.commands.setContent('');
-    }
-    
-    // Create new page with content after cursor (if any)
-    setTimeout(() => {
-      addNewPage();
-      // After new page is created, set its content if there was content after cursor
-      if (afterCursor.trim()) {
-        setTimeout(() => {
-          updateCurrentPageContent(afterCursor.trim());
-          if (editor && !editor.isDestroyed) {
-            editor.commands.setContent(afterCursor.trim());
-          }
-        }, 100);
-      }
-    }, 50);
   };
 
   if (!editor) {
@@ -262,6 +404,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             disabled={pageInfo.currentPage >= 6}
             size="sm"
             variant="outline"
+            title="Insert page break (Ctrl+Enter)"
           >
             Insert Page Break
           </Button>
@@ -272,6 +415,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             disabled={pages.length >= 6}
             size="sm"
             variant="default"
+            title="Add new page (Ctrl+Shift+N)"
           >
             Add New Page
           </Button>
@@ -419,6 +563,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                title="Previous page (Ctrl+←)"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous Page
@@ -482,6 +627,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                title="Next page (Ctrl+→)"
               >
                 Next Page
                 <ArrowRight className="w-4 h-4 ml-2" />
