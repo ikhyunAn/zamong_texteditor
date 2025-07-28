@@ -53,7 +53,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     currentPageIndex,
     getCurrentPageContent,
     setCurrentPageContent,
-    addEmptyPage 
+    addEmptyPage,
+    initializeWithEmptyPage
   } = useStoryStore();
   const { 
     totalPages, 
@@ -75,8 +76,25 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const { ref: pageBreakRef, inView } = useInView({ threshold: 0.5 });
   
-  // Get page info
-  const pageInfo = getPageInfo();
+  // Refs to track navigation state and prevent content overwrites
+  const isNavigatingRef = useRef(false);
+  const lastSyncedContentRef = useRef('');
+  const lastSyncedPageIndexRef = useRef(-1);
+  
+  // Get page info - make it reactive to currentPageIndex changes
+  const pageInfo = useMemo(() => {
+    const info = getPageInfo();
+    // Comprehensive logging for pagination state tracking during development
+    console.group('[PaginatedEditor] Page State Update');
+    console.log('Current page index:', currentPageIndex);
+    console.log('Total pages:', totalPages);
+    console.log('Pages array length:', pages.length);
+    console.log('Page info:', info);
+    console.log('Page IDs:', pages.map(p => p.id));
+    console.log('Current page content length:', getCurrentPageContent()?.length || 0);
+    console.groupEnd();
+    return info;
+  }, [currentPageIndex, totalPages, getPageInfo, pages, getCurrentPageContent]);
   
   // Calculate current section index based on current page
   const currentSectionIndex = Math.max(0, pageInfo.currentPage - 1);
@@ -92,10 +110,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 
   // Initialize with an empty page if no pages exist
   useEffect(() => {
-    if (pages.length === 0) {
-      addEmptyPage();
-    }
-  }, [pages.length, addEmptyPage]);
+    initializeWithEmptyPage();
+  }, [initializeWithEmptyPage]);
 
   const editor = useEditor({
     extensions: [
@@ -237,10 +253,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       const currentPageIndex = pageInfo.currentPage - 1;
       addNewPage();
       
-      // Navigate to the newly created page after a brief delay
-      setTimeout(() => {
-        const newPageIndex = currentPageIndex + 1;
-        navigateToPage(newPageIndex);
+        // Navigate to the newly created page after a brief delay
+        setTimeout(() => {
+          const newPageIndex = currentPageIndex + 1;
+          // Set navigation flag to prevent content sync interference
+          isNavigatingRef.current = true;
+          navigateToPage(newPageIndex);
         
         // Set content on the new page if there was content after cursor
         setTimeout(() => {
@@ -261,6 +279,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           }
           // Scroll to editor after navigation
           scrollToEditor();
+          // Clear navigation flag after content is set
+          setTimeout(() => {
+            isNavigatingRef.current = false;
+          }, 50);
         }, 150);
       }, 100);
     }, 50);
@@ -289,16 +311,24 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowLeft') {
           event.preventDefault();
           if (pageInfo.hasPreviousPage) {
+            isNavigatingRef.current = true;
             navigateToPage(pageInfo.currentPage - 2);
             scrollToEditor();
+            setTimeout(() => {
+              isNavigatingRef.current = false;
+            }, 200);
           }
         }
         // Ctrl/Cmd + Right Arrow: Next page
         else if ((event.ctrlKey || event.metaKey) && event.key === 'ArrowRight') {
           event.preventDefault();
           if (pageInfo.hasNextPage) {
+            isNavigatingRef.current = true;
             navigateToPage(pageInfo.currentPage);
             scrollToEditor();
+            setTimeout(() => {
+              isNavigatingRef.current = false;
+            }, 200);
           }
         }
         // Ctrl/Cmd + Enter: Insert page break
@@ -320,33 +350,61 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [editor, pageInfo, navigateToPage, scrollToEditor, insertPageBreak, addNewPage, pages.length]);
 
-  // Enhanced content synchronization with focus management
+  // Stabilized content synchronization with navigation-aware updates
   useEffect(() => {
-    if (editor && pages.length > 0) {
-      const currentPageContent = getCurrentPageContent() || '';
-      const currentEditorContent = editor.getText();
+    // Early return if editor is not ready or no pages exist
+    if (!editor || pages.length === 0) {
+      return;
+    }
+    
+    // Skip sync during navigation to prevent content overwrites
+    if (isNavigatingRef.current) {
+      return;
+    }
+    
+    const currentPageContent = getCurrentPageContent() || '';
+    const currentEditorContent = editor.getText();
+    
+    // Determine if sync is actually needed based on multiple conditions:
+    const pageIndexChanged = lastSyncedPageIndexRef.current !== currentPageIndex;
+    const contentChanged = lastSyncedContentRef.current !== currentPageContent;
+    const editorContentDiffers = currentPageContent !== currentEditorContent;
+    
+    // Only sync when:
+    // 1. Page index has changed (navigation occurred)
+    // 2. Stored content has changed (external update)
+    // 3. Editor content differs from stored content
+    // 4. Editor is not focused (to avoid interrupting typing)
+    const shouldSync = (pageIndexChanged || contentChanged || editorContentDiffers) && 
+                      !editor.isFocused;
+    
+    if (shouldSync) {
+      // Update tracking refs before sync to prevent unnecessary future syncs
+      lastSyncedPageIndexRef.current = currentPageIndex;
+      lastSyncedContentRef.current = currentPageContent;
       
-      // Only update if the content is different to avoid infinite loops
-      // Also check if editor is focused to prevent interrupting user typing
-      if (currentPageContent !== currentEditorContent && !editor.isFocused) {
-        // Use setTimeout to prevent immediate re-render conflicts
-        setTimeout(() => {
-          if (editor && !editor.isDestroyed) {
-            // Clear content first to ensure clean state
-            editor.commands.clearContent();
-            // Set new content
-            editor.commands.setContent(currentPageContent || '<p></p>');
-            // Focus the editor at the start of content after a brief delay
+      // Use requestAnimationFrame for better timing coordination
+      requestAnimationFrame(() => {
+        if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
+          // Clear content first to ensure clean state
+          editor.commands.clearContent();
+          // Convert plain text to HTML with proper line break preservation
+          const htmlContent = currentPageContent ? 
+            textToHtmlWithLineBreaks(currentPageContent) : '<p></p>';
+          editor.commands.setContent(htmlContent);
+          
+          // Only focus if this was a page navigation
+          if (pageIndexChanged) {
             setTimeout(() => {
-              if (editor && !editor.isDestroyed) {
+              if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
                 editor.commands.focus('start');
               }
             }, 50);
           }
-        }, 0);
-      }
+        }
+      });
     }
-  }, [editor, currentPageIndex, pages, getCurrentPageContent]);
+  }, [editor, currentPageIndex, getCurrentPageContent]);
 
   // Handle font change
   const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -575,10 +633,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   // Use virtualized list for many pages
                   <List
                     height={40}
-                    itemCount={Math.min(pageInfo.totalPages, 6)}
+                    itemCount={pageInfo.totalPages}
                     itemSize={40}
                     layout="horizontal"
-                    width={Math.min(pageInfo.totalPages, 6) * 40}
+                    width={pageInfo.totalPages * 40}
                   >
                     {({ index, style }) => (
                       <button
@@ -599,7 +657,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   </List>
                 ) : (
                   // Use regular rendering for few pages
-                  Array.from({ length: Math.min(pageInfo.totalPages, 6) }, (_, i) => (
+                  Array.from({ length: pageInfo.totalPages }, (_, i) => (
                     <button
                       key={i}
                       onClick={() => {
@@ -637,7 +695,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             {/* Page Info */}
             <div className="text-center sm:text-right">
               <div className="text-lg font-medium text-gray-800">
-                Page {pageInfo.currentPage} of {Math.min(pageInfo.totalPages, 6)}
+                Page {pageInfo.currentPage} of {pageInfo.totalPages}
               </div>
               {pageInfo.totalPages > 6 && (
                 <div className="text-sm text-red-600 flex items-center justify-center sm:justify-end gap-1 mt-1">

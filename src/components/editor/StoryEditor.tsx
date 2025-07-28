@@ -22,8 +22,9 @@ export function StoryEditor() {
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setContent(html);
+      // Get text content to preserve line breaks instead of HTML
+      const textContent = editor.getText();
+      setContent(textContent);
     },
     editorProps: {
       attributes: {

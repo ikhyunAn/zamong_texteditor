@@ -17,23 +17,25 @@ export function parseHtmlToSections(htmlContent: string): string[] {
     return processTextContent(textContent);
   }
   
-  // Client-side: use DOM parsing
+  // Client-side: use DOM parsing while preserving line break structure
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlContent;
   
-  // Convert <p> tags to line breaks
+  // Convert <p> tags to line breaks with better preservation
   const paragraphs = tempDiv.querySelectorAll('p');
-  paragraphs.forEach((p) => {
-    p.innerHTML = p.innerHTML + '\n\n';
+  paragraphs.forEach((p, index) => {
+    // Add double newline between paragraphs, single after last
+    const suffix = index < paragraphs.length - 1 ? '\n\n' : '\n';
+    p.insertAdjacentText('afterend', suffix);
   });
   
-  // Convert <br> tags to line breaks
+  // Convert <br> tags to single line breaks
   const brs = tempDiv.querySelectorAll('br');
   brs.forEach((br) => {
     br.replaceWith('\n');
   });
   
-  // Get text content
+  // Get text content with preserved structure
   const textContent = tempDiv.textContent || tempDiv.innerText || '';
   
   return processTextContent(textContent);

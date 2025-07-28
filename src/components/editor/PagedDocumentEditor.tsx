@@ -129,6 +129,7 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     getCurrentPageContent,
     setCurrentPageContent,
     addEmptyPage,
+    initializeWithEmptyPage,
     syncPagesToSections
   } = useStoryStore();
   
@@ -148,10 +149,8 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
   
   // Initialize with an empty page if no pages exist
   useEffect(() => {
-    if (pages.length === 0) {
-      addEmptyPage();
-    }
-  }, [pages.length, addEmptyPage]);
+    initializeWithEmptyPage();
+  }, [initializeWithEmptyPage]);
   
   // Clear caches when font changes
   useEffect(() => {
@@ -179,9 +178,12 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     updateCurrentPageContent(newContent);
   }, [updateCurrentPageContent]);
   
-  // Handle page focus to track current page
+  // Handle page focus to track current page with content synchronization
   const handlePageFocus = (index: number) => {
-    navigateToPage(index);
+    // Only navigate if we're actually switching to a different page
+    if (index !== currentPageIndex) {
+      navigateToPage(index);
+    }
   };
   
   // Scroll to current page when editor focuses
