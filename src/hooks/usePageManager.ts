@@ -291,11 +291,14 @@ export const usePageManager = () => {
 
   // Save current page content before navigation with validation
   const syncContentToPage = useCallback(() => {
-    if (pages.length > 0 && currentPageIndex >= 0 && currentPageIndex < pages.length) {
+    // Get fresh state from store to avoid stale closure values
+    const { pages: currentPages, currentPageIndex: currentIndex } = useStoryStore.getState();
+    
+    if (currentPages.length > 0 && currentIndex >= 0 && currentIndex < currentPages.length) {
       // Get the current content from the store
       const currentContent = getCurrentPageContent();
       // Get the current page object
-      const currentPage = pages[currentPageIndex];
+      const currentPage = currentPages[currentIndex];
       
       if (currentPage) {
         // Always update the page content to ensure synchronization
@@ -307,7 +310,8 @@ export const usePageManager = () => {
         
         // Validate that the content was properly saved by checking the updated state
         // Note: Since Zustand updates are synchronous, we can verify immediately
-        const updatedPages = pages;
+        const updatedState = useStoryStore.getState();
+        const updatedPages = updatedState.pages;
         const updatedPage = updatedPages.find(p => p.id === currentPage.id);
         
         if (!updatedPage || updatedPage.content !== currentContent) {
@@ -320,12 +324,15 @@ export const usePageManager = () => {
       }
     }
     return false; // Indicate failed sync
-  }, [pages, currentPageIndex, getCurrentPageContent, updatePage, syncPagesToSections]);
+  }, [getCurrentPageContent, updatePage, syncPagesToSections]);
 
   // Load content for a specific page with validation
   const loadPageContent = useCallback((pageIndex: number) => {
-    if (pages.length > 0 && pageIndex >= 0 && pageIndex < pages.length) {
-      const targetPage = pages[pageIndex];
+    // Get fresh pages data from store to avoid stale closure values
+    const { pages: currentPages } = useStoryStore.getState();
+    
+    if (currentPages.length > 0 && pageIndex >= 0 && pageIndex < currentPages.length) {
+      const targetPage = currentPages[pageIndex];
       if (targetPage) {
         // Set the content for the target page
         setCurrentPageContent(targetPage.content);
@@ -349,16 +356,19 @@ export const usePageManager = () => {
       }
     }
     return '';
-  }, [pages, setCurrentPageContent, getCurrentPageContent]);
+  }, [setCurrentPageContent, getCurrentPageContent]);
 
   // Enhanced navigation that ensures proper page loading
   const navigateToPageWithSync = useCallback((pageIndex: number) => {
     const navigationStartTime = performance.now();
     
-    // Runtime validation of navigation parameters
-    const navigationValidation = validateNavigation(currentPageIndex, pageIndex, pages.length);
+    // Get the current pages state directly from the store to avoid stale closure values
+    const { pages: currentPages, currentPageIndex: currentIndex } = useStoryStore.getState();
+    
+    // Runtime validation of navigation parameters using fresh store data
+    const navigationValidation = validateNavigation(currentIndex, pageIndex, currentPages.length);
     if (!navigationValidation.isValid) {
-      logNavigation('Navigation Failed', currentPageIndex, pageIndex, false, navigationValidation.errors.join(', '));
+      logNavigation('Navigation Failed', currentIndex, pageIndex, false, navigationValidation.errors.join(', '));
       console.error('[PageManager] Navigation validation failed:', navigationValidation.errors);
       return;
     }
@@ -368,13 +378,13 @@ export const usePageManager = () => {
       console.warn('[PageManager] Navigation warnings:', navigationValidation.warnings);
     }
     
-    console.group(`[PageManager] Navigation: ${currentPageIndex} → ${pageIndex}`);
-    console.log('Pages available:', pages.length);
+    console.group(`[PageManager] Navigation: ${currentIndex} → ${pageIndex}`);
+    console.log('Pages available:', currentPages.length);
     console.log('Target page index:', pageIndex);
     
     // Additional bounds check (redundant but safe)
-    if (pageIndex < 0 || pageIndex >= pages.length) {
-      logNavigation('Navigation Bounds Check Failed', currentPageIndex, pageIndex, false, 'Index out of bounds');
+    if (pageIndex < 0 || pageIndex >= currentPages.length) {
+      logNavigation('Navigation Bounds Check Failed', currentIndex, pageIndex, false, 'Index out of bounds');
       console.warn('Navigation aborted: index out of bounds');
       console.groupEnd();
       return;
@@ -386,7 +396,7 @@ export const usePageManager = () => {
     console.log('Sync result:', syncResult);
     
     // Step 2: Validate that content is properly saved by checking the current page
-    const currentPage = pages[currentPageIndex];
+    const currentPage = currentPages[currentIndex];
     const currentContent = getCurrentPageContent();
     console.log('Step 2: Validating content sync');
     console.log('Current page ID:', currentPage?.id);
@@ -412,27 +422,27 @@ export const usePageManager = () => {
     
     // Step 5: Verify the content was loaded correctly
     console.log('Step 5: Verifying content load');
-    if (pages[pageIndex] && targetPageContent !== pages[pageIndex].content) {
+    if (currentPages[pageIndex] && targetPageContent !== currentPages[pageIndex].content) {
       console.warn('Content load verification failed, retrying');
       // Retry loading if there's a mismatch
-      setCurrentPageContent(pages[pageIndex].content);
+      setCurrentPageContent(currentPages[pageIndex].content);
     }
     
     // Final validation and logging
     const navigationEndTime = performance.now();
     const navigationDuration = navigationEndTime - navigationStartTime;
     
-    logNavigation('Navigation Success', currentPageIndex, pageIndex, true);
+    logNavigation('Navigation Success', currentIndex, pageIndex, true);
     logPageState('Navigation Complete', {
       currentPageIndex: pageIndex,
-      totalPages: pages.length,
-      pages: pages,
-      currentPageContent: pages[pageIndex]?.content
+      totalPages: currentPages.length,
+      pages: currentPages,
+      currentPageContent: currentPages[pageIndex]?.content
     });
     
     console.log(`Navigation completed successfully in ${navigationDuration.toFixed(2)}ms`);
     console.groupEnd();
-  }, [pages, currentPageIndex, syncContentToPage, storeNavigateToPage, loadPageContent, getCurrentPageContent, updatePage, syncPagesToSections, setCurrentPageContent]);
+  }, [syncContentToPage, storeNavigateToPage, loadPageContent, getCurrentPageContent, updatePage, syncPagesToSections, setCurrentPageContent]);
 
   return {
     // Page data

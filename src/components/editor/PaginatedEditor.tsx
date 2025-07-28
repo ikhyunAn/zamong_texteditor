@@ -250,41 +250,29 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     
     // Create new page with content after cursor and navigate to it
     setTimeout(() => {
-      const currentPageIndex = pageInfo.currentPage - 1;
+      // Add new page and let addNewPage handle the navigation
       addNewPage();
       
-        // Navigate to the newly created page after a brief delay
-        setTimeout(() => {
-          const newPageIndex = currentPageIndex + 1;
-          // Set navigation flag to prevent content sync interference
-          isNavigatingRef.current = true;
-          navigateToPage(newPageIndex);
-        
-        // Set content on the new page if there was content after cursor
-        setTimeout(() => {
-          if (afterContent.trim()) {
-            const afterHtml = textToHtmlWithLineBreaks(afterContent);
-            updateCurrentPageContent(afterContent.trim());
-            if (editor && !editor.isDestroyed) {
-              editor.commands.setContent(afterHtml);
-              // Focus the editor on the new page
-              editor.commands.focus('start');
-            }
-          } else {
-            // Ensure new page starts with proper structure and focus
-            if (editor && !editor.isDestroyed) {
-              editor.commands.setContent('<p></p>');
-              editor.commands.focus('start');
-            }
+      // Set content on the new page after a brief delay to ensure page is created
+      setTimeout(() => {
+        if (afterContent.trim()) {
+          const afterHtml = textToHtmlWithLineBreaks(afterContent);
+          updateCurrentPageContent(afterContent.trim());
+          if (editor && !editor.isDestroyed) {
+            editor.commands.setContent(afterHtml);
+            // Focus the editor on the new page
+            editor.commands.focus('start');
           }
-          // Scroll to editor after navigation
-          scrollToEditor();
-          // Clear navigation flag after content is set
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 50);
-        }, 150);
-      }, 100);
+        } else {
+          // Ensure new page starts with proper structure and focus
+          if (editor && !editor.isDestroyed) {
+            editor.commands.setContent('<p></p>');
+            editor.commands.focus('start');
+          }
+        }
+        // Scroll to editor after navigation
+        scrollToEditor();
+      }, 200); // Increased delay to ensure navigation completes
     }, 50);
   }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, navigateToPage, scrollToEditor]);
 
