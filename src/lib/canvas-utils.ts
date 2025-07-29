@@ -16,6 +16,7 @@ export interface CanvasTextConfig {
   textStyle: TextStyle;
   canvasWidth: number;
   canvasHeight: number;
+  globalAlignment?: 'left' | 'center' | 'right';
 }
 
 /**
@@ -186,7 +187,7 @@ export function addTextToCanvas(
       fontSize: textStyle.fontSize,
       fontFamily: textStyle.fontFamily,
       fill: textStyle.color,
-      textAlign: textStyle.alignment,
+  textAlign: config.globalAlignment || textStyle.alignment,
       backgroundColor: 'rgba(255, 255, 255, 0.1)', // Slight background for readability
       padding: 10,
       selectable: true,
@@ -198,8 +199,9 @@ export function addTextToCanvas(
       transparentCorners: false
     });
     
-    // Center the textbox if needed
-    if (textStyle.alignment === 'center') {
+    // Center the textbox if needed based on global alignment or text style alignment
+    const finalAlignment = config.globalAlignment || textStyle.alignment;
+    if (finalAlignment === 'center') {
       textbox.set({
         left: (canvasWidth - textbox.width!) / 2,
         originX: 'left'

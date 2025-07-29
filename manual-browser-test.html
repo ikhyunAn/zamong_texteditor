@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Alignment Test Instructions</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-step {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin: 15px 0;
+        }
+        .checklist {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .checklist input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .url {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Text Alignment Verification Test Instructions</h1>
+    
+    <div class="warning">
+        <strong>Prerequisites:</strong> Ensure the development server is running on localhost:3000
+    </div>
+    
+    <div class="test-card">
+        <h2>🎯 Test Objectives</h2>
+        <p>Verify all requirements for text alignment functionality:</p>
+        <ol>
+            <li>Global text alignment controls are removed from Preview & Export step</li>
+            <li>Text alignment controls appear and function correctly in the Paginated Story Editor</li>
+            <li>Background image (stage_1.png) is always visible in the editor with appropriate opacity</li>
+            <li>Text alignment setting persists across page navigation</li>
+            <li>Text alignment affects both editor display and final image generation</li>
+            <li>No console errors or warnings appear</li>
+        </ol>
+    </div>
+
+    <div class="test-card">
+        <h2>🚀 Test Execution Steps</h2>
+        
+        <div class="test-step">
+            <h3>Step 1: Initial Setup</h3>
+            <div class="url">http://localhost:3000</div>
+            <div class="checklist">
+                <label><input type="checkbox"> Open the application in browser</label><br>
+                <label><input type="checkbox"> Open browser developer console (F12)</label><br>
+                <label><input type="checkbox"> Note: No console errors on initial load</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 2: Author Info Step</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Fill in author name: "Test Author"</label><br>
+                <label><input type="checkbox"> Fill in story title: "Alignment Test Story"</label><br>
+                <label><input type="checkbox"> Click "Next" to proceed to editor</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 3: Paginated Story Editor - Text Alignment Controls</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Verify text alignment controls are present in header</label><br>
+                <label><input type="checkbox"> See three buttons: Left, Center, Right alignment</label><br>
+                <label><input type="checkbox"> Default alignment is "Left" (button should be active)</label><br>
+                <label><input type="checkbox"> Alignment controls have proper icons (AlignLeft, AlignCenter, AlignRight)</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 4: Background Image Visibility</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> See stage_1.png background image in editor page</label><br>
+                <label><input type="checkbox"> Background has white overlay with ~80% opacity (text is readable)</label><br>
+                <label><input type="checkbox"> Background image covers entire page area (900x1600px)</label><br>
+                <label><input type="checkbox"> Page has proper shadow and border styling</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 5: Text Input and Alignment Testing</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Type test content: "This is a test story for alignment testing. The text should align according to the selected alignment option."</label><br>
+                <label><input type="checkbox"> Text appears left-aligned by default</label><br>
+                <label><input type="checkbox"> Click "Center" alignment button</label><br>
+                <label><input type="checkbox"> Text immediately centers in the editor</label><br>
+                <label><input type="checkbox"> Center alignment button becomes active</label><br>
+                <label><input type="checkbox"> Click "Right" alignment button</label><br>
+                <label><input type="checkbox"> Text immediately right-aligns in the editor</label><br>
+                <label><input type="checkbox"> Right alignment button becomes active</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 6: Multi-Page Alignment Persistence</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Set text alignment to "Center"</label><br>
+                <label><input type="checkbox"> Add more content to create a second page or click "Add New Page"</label><br>
+                <label><input type="checkbox"> Navigate to page 2</label><br>
+                <label><input type="checkbox"> Add some text on page 2</label><br>
+                <label><input type="checkbox"> Verify text on page 2 is also center-aligned</label><br>
+                <label><input type="checkbox"> Navigate back to page 1</label><br>
+                <label><input type="checkbox"> Verify page 1 text is still center-aligned</label><br>
+                <label><input type="checkbox"> Change alignment to "Right" on page 1</label><br>
+                <label><input type="checkbox"> Navigate to page 2 again</label><br>
+                <label><input type="checkbox"> Verify page 2 text is now right-aligned (global setting)</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 7: Preview & Export Step - No Alignment Controls</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Click "Preview & Export" to go to step 3</label><br>
+                <label><input type="checkbox"> Verify NO text alignment controls are present</label><br>
+                <label><input type="checkbox"> Should only see background toggle and export options</label><br>
+                <label><input type="checkbox"> No AlignLeft, AlignCenter, AlignRight buttons visible</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 8: Image Generation with Alignment</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Wait for preview images to generate</label><br>
+                <label><input type="checkbox"> Examine generated preview images</label><br>
+                <label><input type="checkbox"> Verify text in preview images matches the alignment setting (right-aligned in this case)</label><br>
+                <label><input type="checkbox"> Check all 4 background variations show correct text alignment</label><br>
+                <label><input type="checkbox"> Click on a preview image to zoom in</label><br>
+                <label><input type="checkbox"> Confirm zoomed image shows proper text alignment</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 9: Console Error Check</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Check browser console throughout the test</label><br>
+                <label><input type="checkbox"> No red errors should appear</label><br>
+                <label><input type="checkbox"> Only informational logs should be present</label><br>
+                <label><input type="checkbox"> No TypeScript or React warnings</label>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>Step 10: Full Export Test</h3>
+            <div class="checklist">
+                <label><input type="checkbox"> Click "Generate & Download All Images"</label><br>
+                <label><input type="checkbox"> Wait for export progress to complete</label><br>
+                <label><input type="checkbox"> Download should start automatically</label><br>
+                <label><input type="checkbox"> Extract ZIP file and examine images</label><br>
+                <label><input type="checkbox"> All images in ZIP should show correct text alignment</label><br>
+                <label><input type="checkbox"> Images organized by background stages (Stage 1, Stage 2, etc.)</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>📋 Test Completion Summary</h2>
+        <div class="checklist">
+            <h4>Core Requirements Verified:</h4>
+            <label><input type="checkbox"> ✅ Global text alignment controls removed from Preview & Export</label><br>
+            <label><input type="checkbox"> ✅ Text alignment controls present and functional in Paginated Editor</label><br>
+            <label><input type="checkbox"> ✅ Background image always visible with proper opacity</label><br>
+            <label><input type="checkbox"> ✅ Text alignment persists across page navigation</label><br>
+            <label><input type="checkbox"> ✅ Text alignment affects both editor display and image generation</label><br>
+            <label><input type="checkbox"> ✅ No console errors or warnings</label>
+        </div>
+        
+        <div class="success" id="completion-message" style="display: none;">
+            <strong>🎉 All tests completed successfully!</strong> The text alignment functionality is working as expected.
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>🐛 Common Issues to Watch For</h2>
+        <ul>
+            <li><strong>Background image not loading:</strong> Check if stage_1.png exists in /public/backgrounds/</li>
+            <li><strong>Alignment not persisting:</strong> Verify global vs local alignment settings in store</li>
+            <li><strong>Console errors:</strong> Check for TypeScript compilation issues</li>
+            <li><strong>Image generation fails:</strong> Verify fabric.js canvas rendering works correctly</li>
+        </ul>
+    </div>
+
+    <script>
+        // Auto-check completion when enough checkboxes are checked
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox') {
+                const totalCheckboxes = document.querySelectorAll('input[type="checkbox"]').length;
+                const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked').length;
+                
+                if (checkedBoxes >= totalCheckboxes * 0.9) { // 90% completion
+                    document.getElementById('completion-message').style.display = 'block';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

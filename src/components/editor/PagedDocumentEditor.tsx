@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, useTransition, useDeferredValue } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
 import { usePageManager } from '@/hooks/usePageManager';
-import { AVAILABLE_FONTS, DEFAULT_TEXT_STYLE } from '@/lib/constants';
+import { AVAILABLE_FONTS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { debounce } from '@/lib/debounce';
 import EnhancedTextarea, { EnhancedTextareaRef } from '@/components/ui/enhanced-textarea';
 import { 
   ArrowLeft, 
@@ -15,7 +14,12 @@ import {
   Type, 
   BookOpen,
   FileText,
-  Plus
+  Plus,
+  Image,
+  ImageOff,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from 'lucide-react';
 
 interface Page {
@@ -130,7 +134,8 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     setCurrentPageContent,
     addEmptyPage,
     initializeWithEmptyPage,
-    syncPagesToSections
+    syncPagesToSections,
+    setTextAlignment
   } = useStoryStore();
   
   const {
@@ -144,7 +149,8 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
   } = usePageManager();
   
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
-  const [showLineWarning, setShowLineWarning] = useState(false);
+const [showLineWarning, setShowLineWarning] = useState(false);
+  const [backgroundPreview, setBackgroundPreview] = useState(true);
   const [isPending, startTransition] = useTransition();
   
   // Initialize with an empty page if no pages exist
@@ -221,7 +227,47 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
             </select>
           </div>
           
-          {/* Page Info */}
+          {/* Text Alignment Controls */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Align:</span>
+            <div className="flex border rounded-md overflow-hidden">
+              <Button
+                variant={editorSettings.textAlignment === 'left' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTextAlignment('left')}
+                className="rounded-none border-0 px-2"
+              >
+                <AlignLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={editorSettings.textAlignment === 'center' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTextAlignment('center')}
+                className="rounded-none border-0 px-2 border-l"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={editorSettings.textAlignment === 'right' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setTextAlignment('right')}
+                className="rounded-none border-0 px-2 border-l"
+              >
+                <AlignRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          
+{/* Toggle Background Preview */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBackgroundPreview(!backgroundPreview)}
+              className={`px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-all transform ease-in-out ${backgroundPreview ? 'bg-blue-100' : 'bg-white'}`}
+            >
+              {backgroundPreview ? <ImageOff className="w-4 h-4" /> : <Image className="w-4 h-4" />}
+              {backgroundPreview ? 'Disable Background' : 'Enable Background'}
+            </button>
+          </div>
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <span className="flex items-center gap-1">
               <FileText className="w-4 h-4" />
@@ -278,11 +324,11 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
                 <div 
                   className="relative bg-white border-2 border-gray-300 shadow-lg rounded-lg overflow-hidden"
                   style={{
-                    width: `${PAGE_WIDTH}px`,
+width: `${PAGE_WIDTH}px`,
                     height: `${PAGE_HEIGHT}px`,
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, #f0f0f0 31px, #f0f0f0 32px)',
-                    backgroundSize: '100% 32px',
-                    backgroundPosition: `0 ${PAGE_PADDING}px`
+                    backgroundImage: backgroundPreview ? `url('/backgrounds/stage_1.png')` : 'none',
+                    backgroundSize: 'cover',
+                    opacity: backgroundPreview ? 0.2 : 1
                   }}
                 >
                   <EnhancedTextarea
@@ -305,7 +351,8 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
                       fontFamily: selectedFont,
                       fontSize: `${FONT_SIZE}px`,
                       lineHeight: `${LINE_HEIGHT}px`,
-                      color: '#333'
+                      color: '#333',
+                      textAlign: editorSettings.textAlignment
                     }}
                     placeholder={index === 0 ? "Start writing your story here..." : "Continue writing..."}
                   />

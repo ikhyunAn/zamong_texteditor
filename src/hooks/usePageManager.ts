@@ -290,15 +290,18 @@ export const usePageManager = () => {
   }, [setCurrentPageContent]);
 
   // Save current page content before navigation with validation
-  const syncContentToPage = useCallback(() => {
+  const syncContentToPage = useCallback((editorContent?: string) => {
     // Get fresh state from store to avoid stale closure values
     const { pages: currentPages, currentPageIndex: currentIndex } = useStoryStore.getState();
     
     if (currentPages.length > 0 && currentIndex >= 0 && currentIndex < currentPages.length) {
-      // Get the current content from the store
-      const currentContent = getCurrentPageContent();
+      // Use provided editor content, or fall back to store content
+      const currentContent = editorContent !== undefined ? editorContent : getCurrentPageContent();
       // Get the current page object
       const currentPage = currentPages[currentIndex];
+      
+      console.log('[syncContentToPage] Syncing page:', currentIndex, 'with content length:', currentContent?.length || 0);
+      console.log('[syncContentToPage] Using editor content:', editorContent !== undefined);
       
       if (currentPage) {
         // Always update the page content to ensure synchronization
@@ -320,6 +323,7 @@ export const usePageManager = () => {
           console.warn('Content synchronization validation failed for page:', currentPage.id);
         }
         
+        console.log('[syncContentToPage] Successfully synced page:', currentPage.id, 'with content length:', currentContent?.length || 0);
         return true; // Indicate successful sync
       }
     }

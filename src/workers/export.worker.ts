@@ -10,6 +10,7 @@ interface ExportTask {
   backgroundImage?: string;
   dimensions: { width: number; height: number };
   pageNumber: number;
+  globalAlignment?: 'left' | 'center' | 'right';
 }
 
 interface ExportResult {
@@ -52,7 +53,7 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
 
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = task.textStyle.color || '#000000';
-    ctx.textAlign = task.textStyle.alignment || 'left';
+    ctx.textAlign = task.globalAlignment || task.textStyle.alignment || 'left';
 
     // Word wrap and draw text
     const maxWidth = task.dimensions.width - (padding * 2);

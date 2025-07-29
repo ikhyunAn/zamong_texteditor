@@ -15,7 +15,8 @@ import {
   CheckCircle,
   ZoomIn,
   Eye,
-  FileArchive
+  FileArchive,
+  ImageOff
 } from 'lucide-react';
 import { DEFAULT_BACKGROUNDS, DEFAULT_TEXT_STYLE } from '@/lib/constants';
 import JSZip from 'jszip';
@@ -45,7 +46,8 @@ export function BatchImageGenerator() {
   const { 
     pages,
     authorInfo,
-    setCurrentStep 
+    setCurrentStep,
+    editorSettings
   } = useStoryStore();
   const { showError, showSuccess } = useToast();
   
@@ -54,6 +56,7 @@ export function BatchImageGenerator() {
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [selectedPreviewPage, setSelectedPreviewPage] = useState<number | null>(null);
   const [selectedPreviewBackground, setSelectedPreviewBackground] = useState<string | null>(null);
+  const [backgroundPreview, setBackgroundPreview] = useState(true);
   
   // State for export system
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
@@ -81,32 +84,12 @@ export function BatchImageGenerator() {
         backgroundColor: '#ffffff'
       });
 
-      // Load background image
-      fabric.Image.fromURL(backgroundPath, (img) => {
-        if (!img) {
-          reject(new Error('Failed to load background image'));
-          return;
-        }
-
-        // Scale image to fit canvas maintaining aspect ratio
-        const scaleX = EXPORT_DIMENSIONS.width / (img.width || 1);
-        const scaleY = EXPORT_DIMENSIONS.height / (img.height || 1);
-        const scale = Math.max(scaleX, scaleY);
-
-        img.set({
-          scaleX: scale,
-          scaleY: scale,
-          left: (EXPORT_DIMENSIONS.width - (img.width || 0) * scale) / 2,
-          top: (EXPORT_DIMENSIONS.height - (img.height || 0) * scale) / 2,
-          selectable: false,
-          evented: false
-        });
-
-        canvas.add(img);
-        canvas.sendToBack(img);
-
-        // Add text with default styling
-        const textStyle = DEFAULT_TEXT_STYLE;
+      const addTextAndRender = () => {
+        // Add text with global alignment from editor settings
+        const textStyle = {
+          ...DEFAULT_TEXT_STYLE,
+          alignment: editorSettings.globalTextAlignment || editorSettings.textAlignment || DEFAULT_TEXT_STYLE.alignment
+        };
         const text = new fabric.Textbox(page.content, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.1,
@@ -152,7 +135,41 @@ export function BatchImageGenerator() {
             canvas.dispose();
             reject(new Error('Failed to export canvas: ' + error.message));
           });
-      }, { crossOrigin: 'anonymous' });
+      };
+
+      // Only load background image if backgroundPreview is enabled
+      if (backgroundPreview) {
+        // Load background image
+        fabric.Image.fromURL(backgroundPath, (img: fabric.Image) => {
+          if (!img) {
+            reject(new Error('Failed to load background image'));
+            return;
+          }
+
+          // Scale image to fit canvas maintaining aspect ratio
+          const scaleX = EXPORT_DIMENSIONS.width / (img.width || 1);
+          const scaleY = EXPORT_DIMENSIONS.height / (img.height || 1);
+          const scale = Math.max(scaleX, scaleY);
+
+          img.set({
+            scaleX: scale,
+            scaleY: scale,
+            left: (EXPORT_DIMENSIONS.width - (img.width || 0) * scale) / 2,
+            top: (EXPORT_DIMENSIONS.height - (img.height || 0) * scale) / 2,
+            selectable: false,
+            evented: false
+          });
+
+          canvas.add(img);
+          canvas.sendToBack(img);
+          
+          addTextAndRender();
+        }, { crossOrigin: 'anonymous' });
+      } else {
+        // Just add text without background
+        addTextAndRender();
+      }
+
     });
   };
   
@@ -326,12 +343,12 @@ export function BatchImageGenerator() {
     URL.revokeObjectURL(downloadUrl);
   };
   
-  // Generate previews when component mounts or pages change
+  // Generate previews when component mounts or pages/alignment change
   useEffect(() => {
     if (pages && pages.length > 0) {
       generatePreviews();
     }
-  }, [pages, generatePreviews]);
+  }, [pages, editorSettings.globalTextAlignment, editorSettings.textAlignment, backgroundPreview, generatePreviews]);
 
   const handleBack = useCallback(() => {
     setCurrentStep(1);
@@ -359,22 +376,36 @@ export function BatchImageGenerator() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              <p>Total pages: <strong>{pages.length}</strong></p>
-              <p>Total images to generate: <strong>{pages.length * DEFAULT_BACKGROUNDS.length}</strong></p>
+          <div className="space-y-4">
+            {/* Background Preview Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setBackgroundPreview(!backgroundPreview)}
+                className={`px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-all transform ease-in-out ${backgroundPreview ? 'bg-blue-100' : 'bg-white'}`}
+                title="Toggle background preview in image generation"
+              >
+                {backgroundPreview ? <ImageOff className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                {backgroundPreview ? 'Hide Backgrounds' : 'Show Backgrounds'}
+              </button>
             </div>
-            <div className="flex items-center space-x-2">
-              {pages.map((page, index) => (
-                <Badge
-                  key={page.id}
-                  variant={selectedPreviewPage === index ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedPreviewPage(index)}
-                >
-                  Page {index + 1}
-                </Badge>
-              ))}
+            
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                <p>Total pages: <strong>{pages.length}</strong></p>
+                <p>Total images to generate: <strong>{pages.length * DEFAULT_BACKGROUNDS.length}</strong></p>
+              </div>
+              <div className="flex items-center space-x-2">
+                {pages.map((page, index) => (
+                  <Badge
+                    key={page.id}
+                    variant={selectedPreviewPage === index ? 'default' : 'outline'}
+                    className="cursor-pointer transition-all transform ease-in-out hover:scale-105"
+                    onClick={() => setSelectedPreviewPage(index)}
+                  >
+                    Page {index + 1}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -28,7 +28,10 @@ import {
   Type, 
   BookOpen, 
   Bold as BoldIcon, 
-  Italic as ItalicIcon 
+  Italic as ItalicIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from 'lucide-react';
 
 interface PaginatedEditorProps {
@@ -54,7 +57,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     getCurrentPageContent,
     setCurrentPageContent,
     addEmptyPage,
-    initializeWithEmptyPage
+    initializeWithEmptyPage,
+    setTextAlignment
   } = useStoryStore();
   const { 
     totalPages, 
@@ -66,7 +70,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     addNewPage,
     updateCurrentPageContent,
     storeGetCurrentPageContent,
-    syncPagesToSections
+    syncPagesToSections,
+    syncContentToPage
   } = usePageManager();
   
   const [currentLines, setCurrentLines] = useState(0);
@@ -79,7 +84,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   // Refs to track navigation state and prevent content overwrites
   const isNavigatingRef = useRef(false);
   const lastSyncedContentRef = useRef('');
-  const lastSyncedPageIndexRef = useRef(-1);
+  const lastSyncedPageIndexRef = useRef(0);
   
   // Get page info - make it reactive to currentPageIndex changes
   const pageInfo = useMemo(() => {
@@ -99,14 +104,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   // Calculate current section index based on current page
   const currentSectionIndex = Math.max(0, pageInfo.currentPage - 1);
   
-  // Create debounced line count function
-  const debouncedCalculateLineCount = useMemo(
-    () => debounce((text: string) => {
-      const lines = calculateLineCount(text);
-      setCurrentLines(lines);
-    }, 300),
-    [calculateLineCount]
-  );
 
   // Initialize with an empty page if no pages exist
   useEffect(() => {
@@ -121,24 +118,70 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       }),
     ],
     content: getCurrentPageContent() || '',
-    onUpdate: ({ editor }) => {
-      // Re-enabled with safeguards: Update current page content when editor changes
-      const newContent = editor.getText();
-      // Only update if there's actually new content to prevent infinite loops
-      if (newContent !== getCurrentPageContent()) {
-        updateCurrentPageContent(newContent);
-        // Update line count with debouncing
-        debouncedCalculateLineCount(newContent);
-      }
-    },
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${FONT_SIZE}px; line-height: ${LINE_HEIGHT}px; color: #333;`,
+        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${FONT_SIZE}px; line-height: ${LINE_HEIGHT}px; color: #333; text-align: ${editorSettings.textAlignment};`,
         contenteditable: 'true',
       },
     },
   });
+
+  // Create debounced line count function after editor is declared
+  const debouncedCalculateLineCount = useMemo(
+    () => debounce((text: string) => {
+      const lines = calculateLineCount(text);
+      setCurrentLines(lines);
+      // Update text alignment dynamically
+      if (editor) {
+        const editorElement = editor.view.dom as HTMLElement;
+        editorElement.style.textAlign = editorSettings.textAlignment;
+      }
+    }, 300),
+    [calculateLineCount, editor, editorSettings.textAlignment]
+  );
+
+  // Add onUpdate to editor after debounced function is available
+  useEffect(() => {
+    if (editor) {
+      editor.setOptions({
+        onUpdate: ({ editor }) => {
+          // Re-enabled with safeguards: Update current page content when editor changes
+          const newContent = editor.getText();
+          // Only update if there's actually new content to prevent infinite loops
+          if (newContent !== getCurrentPageContent()) {
+            updateCurrentPageContent(newContent);
+            // Update line count with debouncing
+            debouncedCalculateLineCount(newContent);
+          }
+        },
+      });
+    }
+  }, [editor, debouncedCalculateLineCount, getCurrentPageContent, updateCurrentPageContent]);
+
+  // Navigation wrapper that syncs current editor content before navigating
+  const navigateToPageWithEditorSync = useCallback((pageIndex: number) => {
+    if (editor) {
+      // Get current editor content and sync it to the store before navigation
+      const currentEditorContent = editor.getText();
+      console.log('[Navigation] Syncing editor content before navigation:', currentEditorContent.length, 'characters');
+      syncContentToPage(currentEditorContent);
+    }
+    // Then proceed with normal navigation
+    navigateToPage(pageIndex);
+  }, [editor, syncContentToPage, navigateToPage]);
+
+  // Add new page wrapper that syncs current editor content before adding new page
+  const addNewPageWithSync = useCallback(() => {
+    if (editor) {
+      // Get current editor content and sync it to the store before adding new page
+      const currentEditorContent = editor.getText();
+      console.log('[AddNewPage] Syncing editor content before adding new page:', currentEditorContent.length, 'characters');
+      syncContentToPage(currentEditorContent);
+    }
+    // Then proceed with adding new page
+    addNewPage();
+  }, [editor, syncContentToPage, addNewPage]);
 
   // Smooth scroll to editor when page changes
   // Enhanced smooth scroll to editor with focus management
@@ -300,7 +343,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           event.preventDefault();
           if (pageInfo.hasPreviousPage) {
             isNavigatingRef.current = true;
-            navigateToPage(pageInfo.currentPage - 2);
+            navigateToPageWithEditorSync(pageInfo.currentPage - 2);
             scrollToEditor();
             setTimeout(() => {
               isNavigatingRef.current = false;
@@ -312,7 +355,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           event.preventDefault();
           if (pageInfo.hasNextPage) {
             isNavigatingRef.current = true;
-            navigateToPage(pageInfo.currentPage);
+            navigateToPageWithEditorSync(pageInfo.currentPage);
             scrollToEditor();
             setTimeout(() => {
               isNavigatingRef.current = false;
@@ -328,7 +371,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
           event.preventDefault();
           if (pages.length < 6) {
-            addNewPage();
+            addNewPageWithSync();
           }
         }
       }
@@ -336,7 +379,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editor, pageInfo, navigateToPage, scrollToEditor, insertPageBreak, addNewPage, pages.length]);
+  }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, insertPageBreak, addNewPageWithSync, pages.length]);
 
   // Stabilized content synchronization with navigation-aware updates
   useEffect(() => {
@@ -358,15 +401,29 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     const contentChanged = lastSyncedContentRef.current !== currentPageContent;
     const editorContentDiffers = currentPageContent !== currentEditorContent;
     
+    // Add debugging to understand sync behavior
+    console.log('[Sync Debug]', {
+      currentPageIndex,
+      pageIndexChanged,
+      contentChanged,
+      editorContentDiffers,
+      currentPageContent: currentPageContent.substring(0, 50) + '...',
+      currentEditorContent: currentEditorContent.substring(0, 50) + '...',
+      lastSyncedPageIndex: lastSyncedPageIndexRef.current,
+      lastSyncedContent: lastSyncedContentRef.current.substring(0, 50) + '...',
+      editorIsFocused: editor.isFocused
+    });
+    
     // Only sync when:
-    // 1. Page index has changed (navigation occurred)
-    // 2. Stored content has changed (external update)
-    // 3. Editor content differs from stored content
-    // 4. Editor is not focused (to avoid interrupting typing)
-    const shouldSync = (pageIndexChanged || contentChanged || editorContentDiffers) && 
+    // 1. Page index has changed (navigation occurred) - this is the primary trigger
+    // 2. Stored content has changed (external update) AND it's not empty
+    // BE MORE PROTECTIVE: Don't sync just because editor content differs
+    const shouldSync = (pageIndexChanged || (contentChanged && currentPageContent.trim())) && 
                       !editor.isFocused;
     
     if (shouldSync) {
+      console.log('[Sync] Syncing content for page', currentPageIndex, 'with content:', currentPageContent.substring(0, 50));
+      
       // Update tracking refs before sync to prevent unnecessary future syncs
       lastSyncedPageIndexRef.current = currentPageIndex;
       lastSyncedContentRef.current = currentPageContent;
@@ -406,6 +463,15 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   };
 
+  // Ensure text alignment is correctly applied on render
+  // This useEffect must be called before any early returns to maintain hook order
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      editorElement.style.textAlign = editorSettings.textAlignment;
+    }
+  }, [editor, editorSettings.textAlignment]);
+
   if (!editor) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -427,6 +493,45 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           <BookOpen className="w-5 h-5" />
           Paginated Story Editor
         </CardTitle>
+        
+        {/* Text Alignment Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Text Alignment:</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant={editorSettings.textAlignment === 'left' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTextAlignment('left')}
+              className="h-8 w-8 p-0"
+              title="Align left"
+            >
+              <AlignLeft className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant={editorSettings.textAlignment === 'center' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTextAlignment('center')}
+              className="h-8 w-8 p-0"
+              title="Align center"
+            >
+              <AlignCenter className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant={editorSettings.textAlignment === 'right' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTextAlignment('right')}
+              className="h-8 w-8 p-0"
+              title="Align right"
+            >
+              <AlignRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           {/* Font Selection */}
           <div className="flex items-center gap-2">
@@ -457,7 +562,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           
           {/* Add New Page Button */}
           <Button 
-            onClick={addNewPage}
+            onClick={addNewPageWithSync}
             disabled={pages.length >= 6}
             size="sm"
             variant="default"
@@ -562,14 +667,24 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 style={{
                   width: `${PAGE_WIDTH}px`,
                   height: `${PAGE_HEIGHT}px`,
-                  backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 31px, #f0f0f0 31px, #f0f0f0 32px)',
-                  backgroundSize: '100% 32px',
-                  backgroundPosition: `0 ${PAGE_PADDING}px`
+                  backgroundImage: 'url(/backgrounds/stage_1.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
                 }}
               >
+                {/* Background overlay for text readability */}
+                <div 
+                  className="absolute inset-0" 
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)'
+                  }}
+                />
                 <style>{`
                   .ProseMirror {
                     white-space: pre-wrap;
+                    position: relative;
+                    z-index: 1;
                   }
                   .ProseMirror p {
                     margin: 0;
@@ -579,16 +694,18 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                     margin-top: ${LINE_HEIGHT}px;
                   }
                 `}</style>
-                <EditorContent editor={editor} />
+                <div className="relative z-10">
+                  <EditorContent editor={editor} />
+                </div>
                 
                 {/* Line count indicator */}
-                <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-white px-2 py-1 rounded z-20">
                   {currentLines}/{editorSettings.maxLinesPerPage} lines
                 </div>
 
                 {/* Visual indicator when approaching limit */}
                 {currentLines > editorSettings.maxLinesPerPage - 5 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-yellow-200 to-transparent opacity-50" />
+                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-yellow-200 to-transparent opacity-50 z-20" />
                 )}
               </div>
             </div>
@@ -605,7 +722,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 size="default"
                 disabled={!pageInfo.hasPreviousPage}
                 onClick={() => {
-                  navigateToPage(pageInfo.currentPage - 2);
+                  navigateToPageWithEditorSync(pageInfo.currentPage - 2);
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
@@ -630,7 +747,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                       <button
                         style={style}
                         onClick={() => {
-                          navigateToPage(index);
+                          navigateToPageWithEditorSync(index);
                           scrollToEditor();
                         }}
                         className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 hover:scale-110 ${
@@ -649,7 +766,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                     <button
                       key={i}
                       onClick={() => {
-                        navigateToPage(i);
+                        navigateToPageWithEditorSync(i);
                         scrollToEditor();
                       }}
                       className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 hover:scale-110 ${
@@ -669,7 +786,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 size="default"
                 disabled={!pageInfo.hasNextPage}
                 onClick={() => {
-                  navigateToPage(pageInfo.currentPage);
+                  navigateToPageWithEditorSync(pageInfo.currentPage);
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"

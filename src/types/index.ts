@@ -32,6 +32,8 @@ export interface Page {
 export interface EditorSettings {
   maxLinesPerPage: number;
   fontFamily: string;
+  textAlignment: 'left' | 'center' | 'right';
+  globalTextAlignment: 'left' | 'center' | 'right';
 }
 
 export interface BackgroundTemplate {

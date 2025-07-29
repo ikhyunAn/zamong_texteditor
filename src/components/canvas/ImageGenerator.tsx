@@ -35,7 +35,8 @@ export function ImageGenerator() {
     sections, 
     authorInfo, 
     updateSectionTextStyle, 
-    setCurrentStep 
+    setCurrentStep,
+    editorSettings 
   } = useStoryStore();
   const { showError } = useToast();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -174,7 +175,7 @@ export function ImageGenerator() {
         controller.abort();
       };
     }
-  }, [currentSectionIndex, canvasFormat, currentSection, dimensions, showError]);
+  }, [currentSectionIndex, canvasFormat, currentSection, dimensions, showError, editorSettings.globalTextAlignment]);
 
   const loadCanvasContent = async (canvas: any, section: typeof currentSection, signal?: AbortSignal) => {
     try {
@@ -193,7 +194,8 @@ export function ImageGenerator() {
         text: section.content,
         textStyle: section.textStyle,
         canvasWidth: dimensions.width,
-        canvasHeight: dimensions.height
+        canvasHeight: dimensions.height,
+        globalAlignment: editorSettings.globalTextAlignment
       };
 
       addTextToCanvas(canvas, textConfig);
@@ -282,7 +284,8 @@ export function ImageGenerator() {
             text: section.content,
             textStyle: section.textStyle,
             canvasWidth: dimensions.width,
-            canvasHeight: dimensions.height
+            canvasHeight: dimensions.height,
+            globalAlignment: editorSettings.globalTextAlignment
           };
           
           addTextToCanvas(canvas, textConfig);

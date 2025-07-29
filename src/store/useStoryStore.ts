@@ -32,6 +32,8 @@ interface StoryStore extends StoryState {
   updateEditorSettings: (settings: Partial<EditorSettings>) => void;
   setMaxLinesPerPage: (lines: number) => void;
   setFontFamily: (font: string) => void;
+  setTextAlignment: (alignment: 'left' | 'center' | 'right') => void;
+  setGlobalTextAlignment: (alignment: 'left' | 'center' | 'right') => void;
   
   resetStore: () => void;
 }
@@ -53,7 +55,9 @@ const initialState: StoryState = {
   currentPageIndex: 0,
   editorSettings: {
     maxLinesPerPage: 25,
-    fontFamily: 'Arial'
+    fontFamily: 'Arial',
+    textAlignment: 'left',
+    globalTextAlignment: 'left' // Default to left for backward compatibility
   }
 };
 
@@ -376,6 +380,26 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
 
   setFontFamily: (font: string) => {
     get().updateEditorSettings({ fontFamily: font });
+  },
+
+  setTextAlignment: (alignment: 'left' | 'center' | 'right') => {
+    // Update both editor alignment (for PaginatedEditor) and global alignment (for export)
+    set((state) => ({
+      editorSettings: {
+        ...state.editorSettings,
+        textAlignment: alignment,
+        globalTextAlignment: alignment
+      }
+    }));
+  },
+
+  setGlobalTextAlignment: (alignment: 'left' | 'center' | 'right') => {
+    set((state) => ({
+      editorSettings: {
+        ...state.editorSettings,
+        globalTextAlignment: alignment
+      }
+    }));
   },
 
   resetStore: () => {

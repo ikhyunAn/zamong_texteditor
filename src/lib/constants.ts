@@ -20,6 +20,9 @@ export const DEFAULT_TEXT_STYLE = {
   alignment: 'center' as const
 };
 
+// Default background image path for text editor preview
+export const DEFAULT_BACKGROUND_IMAGE = '/backgrounds/stage_1.png';
+
 // Default background templates for different stages
 export const DEFAULT_BACKGROUNDS = [
   {

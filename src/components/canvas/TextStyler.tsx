@@ -9,7 +9,7 @@ import {
   FONT_SIZES, 
   TEXT_COLORS 
 } from '@/lib/constants';
-import { Palette, Type, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Palette, Type, AlignLeft, AlignCenter, AlignRight, HelpCircle } from 'lucide-react';
 
 interface TextStylerProps {
   textStyle: TextStyle;
@@ -124,12 +124,16 @@ export function TextStyler({ textStyle, onStyleChange, onPositionChange }: TextS
 
         {/* Text Alignment */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Text Alignment</Label>
+          <Label className="text-sm font-medium flex items-center">
+            Text Alignment
+            <HelpCircle className="ml-1 w-4 h-4 text-gray-400" title="Alignment affects both editor and generated images" />
+          </Label>
           <div className="flex space-x-2">
             <Button
               variant={textStyle.alignment === 'left' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleAlignmentChange('left')}
+              className="transition-all transform ease-in-out"
             >
               <AlignLeft className="w-4 h-4" />
             </Button>
@@ -137,6 +141,7 @@ export function TextStyler({ textStyle, onStyleChange, onPositionChange }: TextS
               variant={textStyle.alignment === 'center' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleAlignmentChange('center')}
+              className="transition-all transform ease-in-out"
             >
               <AlignCenter className="w-4 h-4" />
             </Button>
@@ -144,6 +149,7 @@ export function TextStyler({ textStyle, onStyleChange, onPositionChange }: TextS
               variant={textStyle.alignment === 'right' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleAlignmentChange('right')}
+              className="transition-all transform ease-in-out"
             >
               <AlignRight className="w-4 h-4" />
             </Button>

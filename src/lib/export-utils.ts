@@ -20,7 +20,8 @@ async function generateImageWithBackground(
   page: Page,
   backgroundPath: string,
   textStyle: TextStyle,
-  pageNumber: number
+  pageNumber: number,
+  globalAlignment?: 'left' | 'center' | 'right'
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const canvas = new fabric.Canvas(null, {
@@ -62,7 +63,7 @@ async function generateImageWithBackground(
         fontSize: textStyle.fontSize,
         fontFamily: textStyle.fontFamily,
         fill: textStyle.color,
-        textAlign: textStyle.alignment,
+        textAlign: globalAlignment || textStyle.alignment,
         lineHeight: 1.5,
         splitByGrapheme: true,
         selectable: false,
@@ -109,6 +110,7 @@ export async function generateAllVersions(
   pages: Page[],
   authorInfo: AuthorInfo,
   textStyle: TextStyle,
+  globalAlignment?: 'left' | 'center' | 'right',
   onProgress?: (progress: ExportProgress) => void
 ): Promise<Blob> {
   const zip = new JSZip();
@@ -139,7 +141,8 @@ export async function generateAllVersions(
         textStyle,
         backgroundImage: background.path,
         dimensions: EXPORT_DIMENSIONS,
-        pageNumber: i + 1
+        pageNumber: i + 1,
+        globalAlignment
       }));
       
       const results = await new Promise<any[]>((resolve, reject) => {
@@ -200,7 +203,8 @@ export async function generateAllVersions(
             page,
             background.path,
             textStyle,
-            i + 1
+            i + 1,
+            globalAlignment
           );
 
           // Add to zip with proper naming
@@ -252,8 +256,9 @@ export function downloadZip(blob: Blob, fileName: string) {
 export async function previewPageWithBackground(
   page: Page,
   backgroundPath: string,
-  textStyle: TextStyle
+  textStyle: TextStyle,
+  globalAlignment?: 'left' | 'center' | 'right'
 ): Promise<string> {
-  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, 1);
+  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, 1, globalAlignment);
   return URL.createObjectURL(blob);
 }
