@@ -62,56 +62,33 @@ export const usePageManager = () => {
     return lineCount;
   }, []);
 
-  // Split content into pages based on line limits
+  // Split content into pages - now creates one page per section without line limits
   const splitIntoPages = useCallback((sections: StorySection[]): Page[] => {
     console.log('[splitIntoPages] Called with sections:', sections.length, sections);
-    const { maxLinesPerPage } = editorSettings;
     const newPages: Page[] = [];
-    let currentPageContent = '';
-    let currentPageId = 1;
-    let currentLines = 0;
-
-    sections.forEach((section) => {
-      const sectionLines = calculateLineCount(section.content);
+    
+    sections.forEach((section, index) => {
+      // Create one page per section, allowing user to decide page breaks
+      newPages.push({
+        id: `page-${index + 1}`,
+        content: section.content.trim()
+      });
       
-      // If adding this section would exceed the limit, create a new page
-      if (currentLines + sectionLines > maxLinesPerPage && currentPageContent.length > 0) {
-        newPages.push({
-          id: `page-${currentPageId}`,
-          content: currentPageContent.trim()
-        });
-        
-        // Check if we've reached the 6-page limit
-        if (newPages.length >= 6) {
-          return; // Stop processing if we've reached the limit
-        }
-        
-        currentPageId++;
-        currentPageContent = '';
-        currentLines = 0;
+      // Check if we've reached the 6-page limit
+      if (newPages.length >= 6) {
+        return; // Stop processing if we've reached the limit
       }
       
-      // Add section content to current page
-      currentPageContent += (currentPageContent ? '\n\n' : '') + section.content;
-      currentLines += sectionLines;
-      
-      // Update line count tracking
+      // Update line count tracking (keep for compatibility)
+      const sectionLines = calculateLineCount(section.content);
       setLineCounts(prev => ({
         ...prev,
         [section.id]: sectionLines
       }));
     });
 
-    // Add the last page if it has content
-    if (currentPageContent.trim().length > 0) {
-      newPages.push({
-        id: `page-${currentPageId}`,
-        content: currentPageContent.trim()
-      });
-    }
-
     return newPages.slice(0, 6); // Ensure we never exceed 6 pages
-  }, [editorSettings, calculateLineCount]);
+  }, [calculateLineCount]);
 
   // Navigate to a specific page
   const navigateToPage = useCallback((pageIndex: number) => {

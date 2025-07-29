@@ -5,15 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Instagram Canvas Dimensions
-export const INSTAGRAM_DIMENSIONS = {
-  SQUARE: { width: 1080, height: 1080 },
-  PORTRAIT: { width: 1080, height: 1350 }
-} as const;
-
 // Default Text Styles
 export const DEFAULT_TEXT_STYLE = {
-  fontFamily: 'Arial',
+  fontFamily: 'CustomFontTTF',
   fontSize: 36,
   color: '#000000',
   position: { x: 50, y: 50 },
@@ -21,7 +15,7 @@ export const DEFAULT_TEXT_STYLE = {
 };
 
 // Default background image path for text editor preview
-export const DEFAULT_BACKGROUND_IMAGE = '/backgrounds/stage_1.png';
+export const DEFAULT_BACKGROUND_IMAGE = '/backgrounds/stage_3.png';
 
 // Default background templates for different stages
 export const DEFAULT_BACKGROUNDS = [
@@ -54,54 +48,6 @@ export const DEFAULT_BACKGROUNDS = [
 // Available font configurations
 export const AVAILABLE_FONTS = [
   {
-    name: 'Arial',
-    family: 'Arial, sans-serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Helvetica',
-    family: 'Helvetica, sans-serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Times New Roman',
-    family: 'Times New Roman, serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Georgia',
-    family: 'Georgia, serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Verdana',
-    family: 'Verdana, sans-serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Trebuchet MS',
-    family: 'Trebuchet MS, sans-serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Impact',
-    family: 'Impact, sans-serif',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
-    name: 'Courier New',
-    family: 'Courier New, monospace',
-    path: null, // System font
-    type: 'system' as const
-  },
-  {
     name: '나눔손글씨',
     family: 'CustomFont',
     path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
@@ -115,14 +61,6 @@ export const AVAILABLE_FONTS = [
   }
 ];
 
-// Font Sizes
-export const FONT_SIZES = [
-  { label: 'Small', value: 24 },
-  { label: 'Medium', value: 36 },
-  { label: 'Large', value: 48 },
-  { label: 'Extra Large', value: 60 },
-  { label: 'Huge', value: 72 }
-] as const;
 
 // Text Colors
 export const TEXT_COLORS = [
@@ -148,7 +86,7 @@ export const EDITOR_SETTINGS = {
   maxLines: 25,
   lineHeight: 1.5,
   fontSize: 16,
-  fontFamily: 'Arial, sans-serif',
+  fontFamily: 'CustomFontTTF',
   backgroundColor: 'transparent',
   textColor: '#000000',
   padding: {
@@ -170,4 +108,18 @@ export const LINE_HEIGHT_OPTIONS = [
   { label: 'Normal (1.5)', value: 1.5 },
   { label: 'Loose (1.8)', value: 1.8 },
   { label: 'Extra Loose (2.0)', value: 2.0 }
+];
+
+// Standard image dimensions (900 × 1600 pixels)
+export const STANDARD_DIMENSIONS = {
+  width: 900,
+  height: 1600
+};
+
+// Font size options
+export const FONT_SIZES = [
+  { label: 'Small', value: 24 },
+  { label: 'Medium', value: 36 },
+  { label: 'Large', value: 48 },
+  { label: 'Extra Large', value: 64 }
 ];

@@ -140,7 +140,7 @@ export function BatchImageGenerator() {
       // Only load background image if backgroundPreview is enabled
       if (backgroundPreview) {
         // Load background image
-        fabric.Image.fromURL(backgroundPath, (img: fabric.Image) => {
+        fabric.Image.fromURL(backgroundPath, (img: any) => {
           if (!img) {
             reject(new Error('Failed to load background image'));
             return;

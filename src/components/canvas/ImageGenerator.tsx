@@ -28,7 +28,7 @@ import {
   disposeCanvas,
   exportCanvasAsImage
 } from '@/lib/canvas-utils';
-import { INSTAGRAM_DIMENSIONS } from '@/lib/constants';
+import { STANDARD_DIMENSIONS } from '@/lib/constants';
 
 export function ImageGenerator() {
   const { 
@@ -68,9 +68,8 @@ export function ImageGenerator() {
   const fabricCanvasRef = useRef<any>(null);
 
   const currentSection = sections[currentSectionIndex];
-  const dimensions = canvasFormat === 'square' 
-    ? INSTAGRAM_DIMENSIONS.SQUARE 
-    : INSTAGRAM_DIMENSIONS.PORTRAIT;
+  // Use standard dimensions (900 × 1600) for both formats
+  const dimensions = STANDARD_DIMENSIONS;
 
   // Initialize canvas
   useEffect(() => {

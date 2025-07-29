@@ -126,7 +126,9 @@ export function TextStyler({ textStyle, onStyleChange, onPositionChange }: TextS
         <div className="space-y-2">
           <Label className="text-sm font-medium flex items-center">
             Text Alignment
-            <HelpCircle className="ml-1 w-4 h-4 text-gray-400" title="Alignment affects both editor and generated images" />
+            <span title="Alignment affects both editor and generated images">
+              <HelpCircle className="ml-1 w-4 h-4 text-gray-400" />
+            </span>
           </Label>
           <div className="flex space-x-2">
             <Button

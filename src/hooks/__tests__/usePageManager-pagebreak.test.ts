@@ -16,7 +16,7 @@ describe('usePageManager - Page Break Functionality Tests', () => {
     sections: [],
     pages: [],
     currentPageIndex: 0,
-    editorSettings: { maxLinesPerPage: 25, fontFamily: 'Arial' },
+    editorSettings: { fontFamily: 'Arial', fontSize: 16, lineHeight: 1.5, textAlignment: 'left' as const, verticalAlignment: 'top' as const, globalTextAlignment: 'left' as const },
     setCurrentStep: jest.fn(),
     setPages: jest.fn(),
     setCurrentPageIndex: jest.fn(),
@@ -56,12 +56,12 @@ describe('usePageManager - Page Break Functionality Tests', () => {
         {
           id: 'section-1',
           content: 'Chapter 1\n\nOnce upon a time\nIn a magical land',
-          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const },
+          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const, verticalAlignment: 'top' as const },
         },
         {
           id: 'section-2',
           content: 'Chapter 2\n\nThe adventure continues\nWith many surprises',
-          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const },
+          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const, verticalAlignment: 'top' as const },
         },
       ];
 
@@ -330,7 +330,7 @@ describe('usePageManager - Page Break Functionality Tests', () => {
         const longSections = Array.from({ length: 50 }, (_, i) => ({
           id: `section-${i + 1}`,
           content: `This is section ${i + 1} with some content\nThat spans multiple lines\n\nAnd has paragraph breaks`,
-          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const },
+          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const, verticalAlignment: 'top' as const },
         }));
 
         const mockStore = createMockStore({
@@ -356,7 +356,7 @@ describe('usePageManager - Page Break Functionality Tests', () => {
         const longSection = {
           id: 'long-section',
           content: Array.from({ length: 100 }, (_, i) => `Line ${i + 1} of very long content`).join('\n'),
-          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const },
+          textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const, verticalAlignment: 'top' as const },
         };
 
         const mockStore = createMockStore({
@@ -445,7 +445,7 @@ describe('usePageManager - Page Break Functionality Tests', () => {
           {
             id: 'section-1',
             content: 'Auto pagination test content',
-            textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const },
+            textStyle: { fontFamily: 'Arial', fontSize: 24, color: '#000000', position: { x: 50, y: 50 }, alignment: 'center' as const, verticalAlignment: 'top' as const },
           },
         ],
       });

@@ -14,7 +14,10 @@ export function autoSplitIntoSections(content: string): StorySection[] {
   return paragraphs.map((paragraph, index) => ({
     id: `section-${index + 1}`,
     content: cleanHtmlContent(paragraph),
-    textStyle: { ...DEFAULT_TEXT_STYLE }
+    textStyle: { 
+      ...DEFAULT_TEXT_STYLE,
+      verticalAlignment: 'middle' as const
+    }
   }));
 }
 
@@ -149,50 +152,29 @@ export function parseContentWithBreaks(content: string): StorySection[] {
   return sections.map((sectionContent, index) => ({
     id: `section-${index + 1}`,
     content: cleanHtmlContent(sectionContent),
-    textStyle: { ...DEFAULT_TEXT_STYLE }
+    textStyle: { 
+      ...DEFAULT_TEXT_STYLE,
+      verticalAlignment: 'middle' as const
+    }
   }));
 }
 
 /**
- * Split content into pages based on line limit
+ * Split content into pages - now puts all content on a single page without line limits
  */
-export function splitContentIntoPages(content: string, maxLinesPerPage: number = 25): Page[] {
+export function splitContentIntoPages(content: string): Page[] {
   if (!content.trim()) {
     return [];
   }
 
   const cleanContent = cleanHtmlContent(content);
-  const lines = cleanContent.split('\n');
-  const pages: Page[] = [];
-
-  let currentPageLines: string[] = [];
-  let pageIndex = 0;
-
-  for (const line of lines) {
-    // Check if adding this line would exceed the line limit
-    if (currentPageLines.length >= maxLinesPerPage) {
-      // Save the current page
-      pages.push({
-        id: `page-${pageIndex + 1}`,
-        content: currentPageLines.join('\n').trim(),
-        backgroundTemplate: undefined
-      });
-
-      // Prepare for the next page
-      currentPageLines = [];
-      pageIndex++;
-    }
-    currentPageLines.push(line);
-  }
-
-  // Add any remaining lines as the last page
-  if (currentPageLines.length > 0) {
-    pages.push({
-      id: `page-${pageIndex + 1}`,
-      content: currentPageLines.join('\n').trim(),
-      backgroundTemplate: undefined
-    });
-  }
+  
+  // Create a single page with all content, allowing user to decide page breaks
+  const pages: Page[] = [{
+    id: `page-1`,
+    content: cleanContent.trim(),
+    backgroundTemplate: undefined
+  }];
 
   return pages;
 }

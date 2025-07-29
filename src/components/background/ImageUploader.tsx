@@ -32,8 +32,6 @@ export function ImageUploader({ onImageSelect, currentImage }: ImageUploaderProp
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp']
     },
     multiple: true,
-    onDragEnter: () => setDragActive(true),
-    onDragLeave: () => setDragActive(false),
   });
 
   const handleImageSelect = (imageUrl: string) => {

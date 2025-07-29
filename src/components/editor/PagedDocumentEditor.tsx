@@ -274,7 +274,7 @@ const [showLineWarning, setShowLineWarning] = useState(false);
               Page {currentPageIndex + 1} of {pages.length}
             </span>
             <span>
-              Lines: {pages[currentPageIndex]?.lineCount || 0}/{MAX_LINES_PER_PAGE}
+              Page Content: {pages[currentPageIndex]?.content?.length || 0} characters
             </span>
             {/* Processing indicator */}
             {isPending && (
@@ -357,15 +357,10 @@ width: `${PAGE_WIDTH}px`,
                     placeholder={index === 0 ? "Start writing your story here..." : "Continue writing..."}
                   />
                   
-                  {/* Line count indicator */}
+                  {/* Character count indicator */}
                   <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-white px-2 py-1 rounded">
-                    {page.lineCount}/{MAX_LINES_PER_PAGE} lines
+                    {page.content?.length || 0} chars
                   </div>
-                  
-                  {/* Visual indicator when approaching limit */}
-                  {page.lineCount > MAX_LINES_PER_PAGE - 5 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-yellow-200 to-transparent opacity-50" />
-                  )}
                 </div>
               </div>
             ))}

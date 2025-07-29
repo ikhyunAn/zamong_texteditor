@@ -1,6 +1,6 @@
 import { fabric } from 'fabric';
 import { StorySection, TextStyle, CanvasSettings } from '@/types';
-import { INSTAGRAM_DIMENSIONS } from './constants';
+import { STANDARD_DIMENSIONS } from './constants';
 
 /**
  * Safely render canvas only if canvas is truthy and has a valid context

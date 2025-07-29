@@ -307,45 +307,24 @@ describe('useStoryStore - Page Management Tests', () => {
   });
 
   describe('Editor Settings Integration', () => {
-    it('should re-split content when maxLinesPerPage changes', () => {
+    it('should update editor settings', () => {
       const { result } = renderHook(() => useStoryStore());
       
       act(() => {
-        result.current.setContent('A very long content that should be split into multiple pages based on the line limit setting.');
+        result.current.updateEditorSettings({ fontSize: 18 });
       });
 
-      const mockSplitContentIntoPages = require('@/lib/text-processing').splitContentIntoPages;
-
-      act(() => {
-        result.current.updateEditorSettings({ maxLinesPerPage: 10 });
-      });
-
-      expect(mockSplitContentIntoPages).toHaveBeenCalledWith(expect.any(String), 10);
+      expect(result.current.editorSettings.fontSize).toBe(18);
     });
 
-    it('should adjust current page index when pages are re-split', () => {
+    it('should update line height setting', () => {
       const { result } = renderHook(() => useStoryStore());
       
-      // Setup initial state with multiple pages
       act(() => {
-        result.current.addPage('Page 1');
-        result.current.addPage('Page 2');
-        result.current.addPage('Page 3');
-        result.current.setCurrentPageIndex(2);
+        result.current.updateEditorSettings({ lineHeight: 1.8 });
       });
 
-      // Simulate content re-split that results in fewer pages
-      const mockSplitContentIntoPages = require('@/lib/text-processing').splitContentIntoPages;
-      mockSplitContentIntoPages.mockReturnValue([
-        { id: 'page-1', content: 'Combined content' }
-      ]);
-
-      act(() => {
-        result.current.updateEditorSettings({ maxLinesPerPage: 50 });
-      });
-
-      // Current page index should be adjusted to valid range
-      expect(result.current.currentPageIndex).toBe(0);
+      expect(result.current.editorSettings.lineHeight).toBe(1.8);
     });
   });
 

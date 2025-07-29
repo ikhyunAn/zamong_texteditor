@@ -13,6 +13,12 @@ interface StoryStore extends StoryState {
   setSections: (sections: StorySection[]) => void;
   updateSection: (sectionId: string, updates: Partial<StorySection>) => void;
   updateSectionTextStyle: (sectionId: string, style: Partial<TextStyle>) => void;
+  updateAllSectionsTextStyle: (style: Partial<TextStyle>) => void;
+  applySectionFontSize: (sectionId: string, fontSize: number) => void;
+  applySectionVerticalAlignment: (sectionId: string, verticalAlignment: 'top' | 'middle' | 'bottom') => void;
+  applyGlobalSectionFontSize: (fontSize: number) => void;
+  applyGlobalSectionVerticalAlignment: (verticalAlignment: 'top' | 'middle' | 'bottom') => void;
+  syncEditorSettingsToSections: () => void;
   
   // Page management actions
   setPages: (pages: Page[]) => void;
@@ -30,20 +36,25 @@ interface StoryStore extends StoryState {
   
   // Editor settings actions
   updateEditorSettings: (settings: Partial<EditorSettings>) => void;
-  setMaxLinesPerPage: (lines: number) => void;
   setFontFamily: (font: string) => void;
   setTextAlignment: (alignment: 'left' | 'center' | 'right') => void;
   setGlobalTextAlignment: (alignment: 'left' | 'center' | 'right') => void;
+  setVerticalAlignment: (alignment: 'top' | 'middle' | 'bottom') => void;
+  setFontSize: (size: number) => void;
+  increaseFontSize: () => void;
+  decreaseFontSize: () => void;
+  setLineHeight: (lineHeight: number) => void;
   
   resetStore: () => void;
 }
 
 const defaultTextStyle: TextStyle = {
-  fontFamily: 'Arial',
+  fontFamily: 'CustomFontTTF',
   fontSize: 24,
   color: '#000000',
   position: { x: 50, y: 50 },
-  alignment: 'center'
+  alignment: 'center',
+  verticalAlignment: 'middle'
 };
 
 const initialState: StoryState = {
@@ -54,10 +65,12 @@ const initialState: StoryState = {
   currentStep: 0,
   currentPageIndex: 0,
   editorSettings: {
-    maxLinesPerPage: 25,
-    fontFamily: 'Arial',
+    fontFamily: 'CustomFontTTF',
+    fontSize: 18,
+    lineHeight: 1.5,
     textAlignment: 'left',
-    globalTextAlignment: 'left' // Default to left for backward compatibility
+    globalTextAlignment: 'left', // Default to left for backward compatibility
+    verticalAlignment: 'top'
   }
 };
 
@@ -99,6 +112,42 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
           : section
       )
     }));
+  },
+
+  // Enhanced section text style management with fontSize and verticalAlignment
+  updateAllSectionsTextStyle: (style: Partial<TextStyle>) => {
+    set((state) => ({
+      sections: state.sections.map((section) => ({
+        ...section,
+        textStyle: { ...section.textStyle, ...style }
+      }))
+    }));
+  },
+
+  applySectionFontSize: (sectionId: string, fontSize: number) => {
+    get().updateSectionTextStyle(sectionId, { fontSize });
+  },
+
+  applySectionVerticalAlignment: (sectionId: string, verticalAlignment: 'top' | 'middle' | 'bottom') => {
+    get().updateSectionTextStyle(sectionId, { verticalAlignment });
+  },
+
+  applyGlobalSectionFontSize: (fontSize: number) => {
+    get().updateAllSectionsTextStyle({ fontSize });
+  },
+
+  applyGlobalSectionVerticalAlignment: (verticalAlignment: 'top' | 'middle' | 'bottom') => {
+    get().updateAllSectionsTextStyle({ verticalAlignment });
+  },
+
+  // Sync all current editor settings to sections
+  syncEditorSettingsToSections: () => {
+    const { editorSettings } = get();
+    get().updateAllSectionsTextStyle({
+      fontSize: editorSettings.fontSize,
+      verticalAlignment: editorSettings.verticalAlignment,
+      alignment: editorSettings.globalTextAlignment
+    });
   },
 
   // Page management actions
@@ -228,30 +277,35 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     set((state) => {
       // Validate input parameters
       if (!pageId || typeof pageId !== 'string') {
-        console.warn('updatePage: invalid pageId provided');
+        console.warn('[updatePage] Invalid pageId provided');
         return state;
       }
       
       if (typeof content !== 'string') {
-        console.warn('updatePage: content must be a string');
+        console.warn('[updatePage] Content must be a string');
         return state;
       }
       
-      // Check if page exists
-      const pageExists = state.pages.some(page => page.id === pageId);
-      if (!pageExists) {
-        console.warn(`updatePage: page with ID ${pageId} not found`);
+      // Find the page index for more efficient lookup
+      const pageIndex = state.pages.findIndex(page => page.id === pageId);
+      if (pageIndex === -1) {
+        console.warn(`[updatePage] Page with ID ${pageId} not found`);
         return state;
       }
       
-      // Create immutable update
-      const updatedPages = state.pages.map((page) =>
-        page.id === pageId ? { ...page, content } : { ...page }
-      );
+      // Create immutable update with better performance
+      const updatedPages = [...state.pages];
+      updatedPages[pageIndex] = { ...updatedPages[pageIndex], content };
+      
+      console.log(`[updatePage] Updated page ${pageId} with content length: ${content.length}`);
+      
+      // Update global content for consistency
+      const globalContent = updatedPages.map(page => page.content).join('\n\n');
       
       return {
         ...state,
-        pages: updatedPages
+        pages: updatedPages,
+        content: globalContent
       };
     });
   },
@@ -308,35 +362,49 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     
     // Validate that we have pages and a valid current page index
     if (pages.length === 0 || currentPageIndex < 0 || currentPageIndex >= pages.length) {
-      console.warn('Cannot set page content: invalid page index or no pages available');
+      console.warn('[setCurrentPageContent] Cannot set page content: invalid page index or no pages available');
       return;
     }
     
     const currentPage = pages[currentPageIndex];
-    
-    // REMOVED: Validation that prevented legitimate empty content updates
-    // This was causing issues where valid navigation content updates were blocked
+    if (!currentPage) {
+      console.warn('[setCurrentPageContent] Current page not found');
+      return;
+    }
     
     // Don't trim content to preserve line breaks at the beginning and end
-    const normalizedContent = content;
+    const normalizedContent = content || '';
     
-    // Only update if content actually changed to avoid unnecessary re-renders
-    if (currentPage.content !== normalizedContent) {
-      console.log(`[setCurrentPageContent] Updating page ${currentPage.id} content: "${currentPage.content}" -> "${normalizedContent}"`);
-      get().updatePage(currentPage.id, normalizedContent);
-      // Force update of content to ensure synchronization with preserved line breaks
-      const updatedPages = get().pages;
-      const globalContent = updatedPages.map(page => page.content).join('\n\n');
-      set({ content: globalContent });
-    }
+    // Always update page content to ensure consistency, even if content appears the same
+    // This prevents issues where the store and editor get out of sync
+    console.log(`[setCurrentPageContent] Updating page ${currentPage.id} content: "${currentPage.content?.substring(0, 50)}..." -> "${normalizedContent?.substring(0, 50)}..."`);
+    
+    // Use a more robust update approach
+    const updatedPages = pages.map((page, index) => 
+      index === currentPageIndex 
+        ? { ...page, content: normalizedContent }
+        : page
+    );
+    
+    // Update pages atomically
+    set({ pages: updatedPages });
+    
+    // Update global content to ensure consistency
+    const globalContent = updatedPages.map(page => page.content).join('\n\n');
+    set({ content: globalContent });
   },
 
   syncPagesToSections: () => {
-    const { pages } = get();
+    const { pages, editorSettings } = get();
     const sections = pages.map((page, index) => ({
       id: page.id.replace('page-', 'section-'),
       content: page.content,
-      textStyle: { ...defaultTextStyle },
+      textStyle: { 
+        ...defaultTextStyle,
+        fontSize: editorSettings.fontSize,
+        verticalAlignment: editorSettings.verticalAlignment,
+        alignment: editorSettings.globalTextAlignment
+      },
       backgroundImage: undefined
     }));
     
@@ -348,35 +416,23 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
   },
 
   splitContentIntoPages: (content: string) => {
-    const { editorSettings } = get();
-    const pages = splitContentIntoPages(content, editorSettings.maxLinesPerPage);
+    // Split content into pages without line limits - let user decide page breaks
+    // For now, put all content on a single page unless manually split
+    const pages: Page[] = [{
+      id: `page-${Date.now()}-1`,
+      content: content.trim(),
+      backgroundTemplate: undefined
+    }];
     set({ pages, currentPageIndex: 0 });
   },
 
   // Editor settings actions
   updateEditorSettings: (settings: Partial<EditorSettings>) => {
-    set((state) => {
-      const newSettings = { ...state.editorSettings, ...settings };
-      
-      // Re-split content if maxLinesPerPage changed
-      if (settings.maxLinesPerPage !== undefined && state.content.trim()) {
-        const pages = splitContentIntoPages(state.content, newSettings.maxLinesPerPage);
-        return {
-          editorSettings: newSettings,
-          pages,
-          currentPageIndex: Math.min(state.currentPageIndex, Math.max(0, pages.length - 1))
-        };
-      }
-      
-      return { editorSettings: newSettings };
-    });
+    set((state) => ({
+      editorSettings: { ...state.editorSettings, ...settings }
+    }));
   },
 
-  setMaxLinesPerPage: (lines: number) => {
-    if (lines > 0) {
-      get().updateEditorSettings({ maxLinesPerPage: lines });
-    }
-  },
 
   setFontFamily: (font: string) => {
     get().updateEditorSettings({ fontFamily: font });
@@ -400,6 +456,45 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
         globalTextAlignment: alignment
       }
     }));
+  },
+
+  setVerticalAlignment: (alignment: 'top' | 'middle' | 'bottom') => {
+    get().updateEditorSettings({ verticalAlignment: alignment });
+    // Also update all existing sections if they exist
+    const { sections } = get();
+    if (sections.length > 0) {
+      get().applyGlobalSectionVerticalAlignment(alignment);
+    }
+  },
+
+  setFontSize: (size: number) => {
+    // Validate font size range
+    const validatedSize = Math.max(8, Math.min(72, size));
+    get().updateEditorSettings({ fontSize: validatedSize });
+    // Also update all existing sections if they exist
+    const { sections } = get();
+    if (sections.length > 0) {
+      get().applyGlobalSectionFontSize(validatedSize);
+    }
+  },
+
+  // Enhanced font size controls with validation
+  increaseFontSize: () => {
+    const { editorSettings } = get();
+    const newSize = Math.min(72, editorSettings.fontSize + 2);
+    get().setFontSize(newSize);
+  },
+
+  decreaseFontSize: () => {
+    const { editorSettings } = get();
+    const newSize = Math.max(8, editorSettings.fontSize - 2);
+    get().setFontSize(newSize);
+  },
+
+  setLineHeight: (lineHeight: number) => {
+    // Validate line height range
+    const validatedLineHeight = Math.max(1.0, Math.min(3.0, lineHeight));
+    get().updateEditorSettings({ lineHeight: validatedLineHeight });
   },
 
   resetStore: () => {

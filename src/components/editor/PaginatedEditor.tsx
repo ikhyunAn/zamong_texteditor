@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import CharacterCount from '@tiptap/extension-character-count';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import HardBreak from '@tiptap/extension-hard-break';
@@ -11,7 +10,7 @@ import { useInView } from 'react-intersection-observer';
 import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
 import { usePageManager } from '../../hooks/usePageManager';
-import { AVAILABLE_FONTS, DEFAULT_TEXT_STYLE } from '../../lib/constants';
+import { AVAILABLE_FONTS, LINE_HEIGHT_OPTIONS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { debounce } from '../../lib/debounce';
@@ -21,6 +20,7 @@ import {
   splitContentPreservingLineBreaks,
   validatePageBreakIntegrity 
 } from '../../lib/text-processing';
+import { useToast } from '../../hooks/useToast';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -31,7 +31,13 @@ import {
   Italic as ItalicIcon,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  AlignHorizontalJustifyStart,
+  AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd,
+  Plus,
+  Minus,
+  RefreshCw
 } from 'lucide-react';
 
 interface PaginatedEditorProps {
@@ -58,25 +64,26 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     setCurrentPageContent,
     addEmptyPage,
     initializeWithEmptyPage,
-    setTextAlignment
+    setTextAlignment,
+    setVerticalAlignment,
+    setFontSize,
+    increaseFontSize,
+    decreaseFontSize,
+    setLineHeight
   } = useStoryStore();
   const { 
     totalPages, 
     getPageInfo, 
-    checkPageLimits, 
-    calculateLineCount,
-    autoPaginate,
     navigateToPage,
     addNewPage,
     updateCurrentPageContent,
     storeGetCurrentPageContent,
     syncPagesToSections,
-    syncContentToPage
+    syncContentToPage,
+    storeUpdatePage: updatePage
   } = usePageManager();
   
-  const [currentLines, setCurrentLines] = useState(0);
-  const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
-  const [pageExceedsLimit, setPageExceedsLimit] = useState(false);
+  const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[1].family); // Default to CustomFontTTF
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
   const { ref: pageBreakRef, inView } = useInView({ threshold: 0.5 });
@@ -113,63 +120,122 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      CharacterCount.configure({
-        limit: editorSettings.maxLinesPerPage * 80,
-      }),
     ],
     content: getCurrentPageContent() || '',
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${FONT_SIZE}px; line-height: ${LINE_HEIGHT}px; color: #333; text-align: ${editorSettings.textAlignment};`,
+        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
         contenteditable: 'true',
       },
     },
   });
 
-  // Create debounced line count function after editor is declared
-  const debouncedCalculateLineCount = useMemo(
-    () => debounce((text: string) => {
-      const lines = calculateLineCount(text);
-      setCurrentLines(lines);
-      // Update text alignment dynamically
+  // Update text alignment dynamically when needed
+  const updateTextAlignment = useMemo(
+    () => debounce(() => {
       if (editor) {
         const editorElement = editor.view.dom as HTMLElement;
         editorElement.style.textAlign = editorSettings.textAlignment;
       }
     }, 300),
-    [calculateLineCount, editor, editorSettings.textAlignment]
+    [editor, editorSettings.textAlignment]
   );
 
-  // Add onUpdate to editor after debounced function is available
+  // Debounced editor content update to prevent excessive store updates
+  const debouncedUpdateContent = useMemo(
+    () => debounce((content: string) => {
+      // Only update if we're not currently navigating and content actually changed
+      if (!isNavigatingRef.current) {
+        const currentStoreContent = getCurrentPageContent();
+        if (content !== currentStoreContent) {
+          console.log('[Editor] Updating store content:', content.length, 'characters');
+          updateCurrentPageContent(content);
+        }
+      }
+    }, 300),
+    [getCurrentPageContent, updateCurrentPageContent]
+  );
+
+  // Add onUpdate to editor with improved synchronization
   useEffect(() => {
     if (editor) {
       editor.setOptions({
         onUpdate: ({ editor }) => {
-          // Re-enabled with safeguards: Update current page content when editor changes
           const newContent = editor.getText();
-          // Only update if there's actually new content to prevent infinite loops
-          if (newContent !== getCurrentPageContent()) {
-            updateCurrentPageContent(newContent);
-            // Update line count with debouncing
-            debouncedCalculateLineCount(newContent);
-          }
+          // Use debounced update to prevent excessive store updates
+          debouncedUpdateContent(newContent);
+          // Update text alignment immediately (UI change)
+          updateTextAlignment();
         },
       });
     }
-  }, [editor, debouncedCalculateLineCount, getCurrentPageContent, updateCurrentPageContent]);
+  }, [editor, debouncedUpdateContent, updateTextAlignment]);
 
-  // Navigation wrapper that syncs current editor content before navigating
+  // Enhanced navigation wrapper with proper synchronization
   const navigateToPageWithEditorSync = useCallback((pageIndex: number) => {
-    if (editor) {
-      // Get current editor content and sync it to the store before navigation
-      const currentEditorContent = editor.getText();
-      console.log('[Navigation] Syncing editor content before navigation:', currentEditorContent.length, 'characters');
-      syncContentToPage(currentEditorContent);
+    console.log(`[Navigation] Starting navigation from ${currentPageIndex} to ${pageIndex}`);
+    
+    if (!editor || pages.length === 0 || pageIndex < 0 || pageIndex >= pages.length) {
+      console.warn('[Navigation] Invalid navigation parameters');
+      return;
     }
-    // Then proceed with normal navigation
-    navigateToPage(pageIndex);
-  }, [editor, syncContentToPage, navigateToPage]);
+
+    // Set navigation flag to prevent interference
+    isNavigatingRef.current = true;
+    
+    try {
+      // Step 1: Get current editor content and save it immediately
+      const currentEditorContent = editor.getText();
+      console.log('[Navigation] Current editor content length:', currentEditorContent.length);
+      
+      // Step 2: Save current page content synchronously
+      if (currentPageIndex >= 0 && currentPageIndex < pages.length) {
+        const currentPageId = pages[currentPageIndex].id;
+        console.log('[Navigation] Saving content to current page:', currentPageId);
+        updatePage(currentPageId, currentEditorContent);
+      }
+      
+      // Step 3: Navigate to new page
+      console.log('[Navigation] Navigating to page:', pageIndex);
+      navigateToPage(pageIndex);
+      
+      // Step 4: Load new page content with a delay to ensure state has updated
+      setTimeout(() => {
+        try {
+          const targetPageContent = pages[pageIndex]?.content || '';
+          console.log('[Navigation] Loading target page content length:', targetPageContent.length);
+          
+          // Temporarily disable editor updates to prevent feedback loops
+          const originalOnUpdate = editor.options.onUpdate;
+          editor.setOptions({ onUpdate: undefined });
+          
+          // Clear and set new content
+          editor.commands.clearContent();
+          const htmlContent = targetPageContent ? 
+            textToHtmlWithLineBreaks(targetPageContent) : '<p></p>';
+          editor.commands.setContent(htmlContent);
+          
+          // Re-enable editor updates after a brief delay
+          setTimeout(() => {
+            if (editor && !editor.isDestroyed) {
+              editor.setOptions({ onUpdate: originalOnUpdate });
+              // Focus the editor
+              editor.commands.focus('start');
+            }
+          }, 50);
+          
+        } finally {
+          // Clear navigation flag
+          isNavigatingRef.current = false;
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('[Navigation] Error during navigation:', error);
+      isNavigatingRef.current = false;
+    }
+  }, [editor, currentPageIndex, pages, navigateToPage, updatePage]);
 
   // Add new page wrapper that syncs current editor content before adding new page
   const addNewPageWithSync = useCallback(() => {
@@ -182,6 +248,22 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     // Then proceed with adding new page
     addNewPage();
   }, [editor, syncContentToPage, addNewPage]);
+
+  // Manual synchronization handler
+  const handleManualSync = useCallback(() => {
+    console.log('[Sync] Manual synchronization triggered');
+    if (editor) {
+      const currentEditorContent = editor.getText();
+      console.log('[Sync] Syncing current editor content:', currentEditorContent.length, 'characters');
+      syncContentToPage(currentEditorContent);
+      // Provide user feedback
+      setPageBreakMessage('Content synchronized successfully!');
+      setTimeout(() => setPageBreakMessage(''), 2000);
+    } else {
+      setPageBreakMessage('Editor not ready. Please try again.');
+      setTimeout(() => setPageBreakMessage(''), 3000);
+    }
+  }, [editor, syncContentToPage]);
 
   // Smooth scroll to editor when page changes
   // Enhanced smooth scroll to editor with focus management
@@ -381,7 +463,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, insertPageBreak, addNewPageWithSync, pages.length]);
 
-  // Stabilized content synchronization with navigation-aware updates
+  // Enhanced content synchronization with improved race condition prevention
   useEffect(() => {
     // Early return if editor is not ready or no pages exist
     if (!editor || pages.length === 0) {
@@ -390,6 +472,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     
     // Skip sync during navigation to prevent content overwrites
     if (isNavigatingRef.current) {
+      console.log('[Sync] Skipping sync during navigation');
       return;
     }
     
@@ -401,7 +484,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     const contentChanged = lastSyncedContentRef.current !== currentPageContent;
     const editorContentDiffers = currentPageContent !== currentEditorContent;
     
-    // Add debugging to understand sync behavior
+    // Enhanced debugging to understand sync behavior
     console.log('[Sync Debug]', {
       currentPageIndex,
       pageIndexChanged,
@@ -411,15 +494,15 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       currentEditorContent: currentEditorContent.substring(0, 50) + '...',
       lastSyncedPageIndex: lastSyncedPageIndexRef.current,
       lastSyncedContent: lastSyncedContentRef.current.substring(0, 50) + '...',
-      editorIsFocused: editor.isFocused
+      editorIsFocused: editor.isFocused,
+      isNavigating: isNavigatingRef.current
     });
     
-    // Only sync when:
+    // More conservative sync conditions:
     // 1. Page index has changed (navigation occurred) - this is the primary trigger
-    // 2. Stored content has changed (external update) AND it's not empty
-    // BE MORE PROTECTIVE: Don't sync just because editor content differs
-    const shouldSync = (pageIndexChanged || (contentChanged && currentPageContent.trim())) && 
-                      !editor.isFocused;
+    // 2. Content has changed externally AND editor is not focused (external update)
+    // 3. Never sync when editor is focused to prevent overwriting user input
+    const shouldSync = pageIndexChanged && !editor.isFocused && !isNavigatingRef.current;
     
     if (shouldSync) {
       console.log('[Sync] Syncing content for page', currentPageIndex, 'with content:', currentPageContent.substring(0, 50));
@@ -428,28 +511,46 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       lastSyncedPageIndexRef.current = currentPageIndex;
       lastSyncedContentRef.current = currentPageContent;
       
-      // Use requestAnimationFrame for better timing coordination
-      requestAnimationFrame(() => {
-        if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
-          // Clear content first to ensure clean state
-          editor.commands.clearContent();
-          // Convert plain text to HTML with proper line break preservation
-          const htmlContent = currentPageContent ? 
-            textToHtmlWithLineBreaks(currentPageContent) : '<p></p>';
-          editor.commands.setContent(htmlContent);
+      // Use requestAnimationFrame for better timing coordination with a timeout fallback
+      const timeoutId = setTimeout(() => {
+        if (editor && !editor.isDestroyed && !isNavigatingRef.current && !editor.isFocused) {
+          console.log('[Sync] Executing content sync for page', currentPageIndex);
           
-          // Only focus if this was a page navigation
-          if (pageIndexChanged) {
+          // Prevent the editor from triggering updates during sync
+          const originalOnUpdate = editor.options.onUpdate;
+          editor.setOptions({ onUpdate: undefined });
+          
+          try {
+            // Clear content first to ensure clean state
+            editor.commands.clearContent();
+            // Convert plain text to HTML with proper line break preservation
+            const htmlContent = currentPageContent ? 
+              textToHtmlWithLineBreaks(currentPageContent) : '<p></p>';
+            editor.commands.setContent(htmlContent);
+            
+            // Focus the editor after content is set for page navigation
+            if (pageIndexChanged) {
+              setTimeout(() => {
+                if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
+                  editor.commands.focus('start');
+                }
+              }, 50);
+            }
+          } finally {
+            // Restore the original onUpdate handler
             setTimeout(() => {
-              if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
-                editor.commands.focus('start');
+              if (editor && !editor.isDestroyed) {
+                editor.setOptions({ onUpdate: originalOnUpdate });
               }
-            }, 50);
+            }, 100);
           }
         }
-      });
+      }, 16); // Use ~1 frame delay for better timing
+      
+      // Cleanup timeout if component unmounts
+      return () => clearTimeout(timeoutId);
     }
-  }, [editor, currentPageIndex, getCurrentPageContent]);
+  }, [editor, currentPageIndex, getCurrentPageContent, pages.length]);
 
   // Handle font change
   const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -472,6 +573,34 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [editor, editorSettings.textAlignment]);
 
+  // Update font size when it changes
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      editorElement.style.fontSize = `${editorSettings.fontSize}px`;
+    }
+  }, [editor, editorSettings.fontSize]);
+
+  // Update vertical alignment when it changes
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      const justifyContent = editorSettings.verticalAlignment === 'top' ? 'flex-start' : 
+                           editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end';
+      editorElement.style.display = 'flex';
+      editorElement.style.flexDirection = 'column';
+      editorElement.style.justifyContent = justifyContent;
+    }
+  }, [editor, editorSettings.verticalAlignment]);
+
+  // Update line height when it changes
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      editorElement.style.lineHeight = `${editorSettings.lineHeight}`;
+    }
+  }, [editor, editorSettings.lineHeight]);
+
   if (!editor) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -483,8 +612,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     );
   }
 
-  const exceedsLineLimit = currentLines > editorSettings.maxLinesPerPage;
-  const remainingLines = Math.max(0, editorSettings.maxLinesPerPage - currentLines);
 
   return (
     <Card className={`w-full ${className}`}>
@@ -532,7 +659,100 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             </Button>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        
+        {/* Vertical Alignment Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Vertical Alignment:</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant={editorSettings.verticalAlignment === 'top' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setVerticalAlignment('top')}
+              className="h-8 w-8 p-0"
+              title="Align top"
+            >
+              <AlignHorizontalJustifyStart className="w-4 h-4 rotate-90" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant={editorSettings.verticalAlignment === 'middle' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setVerticalAlignment('middle')}
+              className="h-8 w-8 p-0"
+              title="Align middle"
+            >
+              <AlignHorizontalJustifyCenter className="w-4 h-4 rotate-90" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant={editorSettings.verticalAlignment === 'bottom' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setVerticalAlignment('bottom')}
+              className="h-8 w-8 p-0"
+              title="Align bottom"
+            >
+              <AlignHorizontalJustifyEnd className="w-4 h-4 rotate-90" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Font Size Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Font Size:</span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={decreaseFontSize}
+              className="h-8 w-8 p-0"
+              title="Decrease font size"
+              disabled={editorSettings.fontSize <= 8}
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            
+            <span className="text-sm font-medium min-w-[3rem] text-center">
+              {editorSettings.fontSize}px
+            </span>
+            
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={increaseFontSize}
+              className="h-8 w-8 p-0"
+              title="Increase font size"
+              disabled={editorSettings.fontSize >= 72}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Line Height Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Line Height:</span>
+          <div className="flex items-center gap-1">
+            {LINE_HEIGHT_OPTIONS.map(option => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={editorSettings.lineHeight === option.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLineHeight(option.value)}
+                className="text-xs px-2 py-1 h-8"
+                title={`Line height ${option.label}`}
+              >
+                {option.value}x
+              </Button>
+            ))}
+          </div>
+        </div>
+<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           {/* Font Selection */}
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4" />
@@ -548,6 +768,17 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               ))}
             </select>
           </div>
+
+          {/* Synchronization Button */}
+          <Button 
+            onClick={handleManualSync}
+            size="sm"
+            variant="outline"
+            title="Synchronize Content"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Synchronize
+          </Button>
           
           {/* Page Break Button */}
           <Button 
@@ -574,27 +805,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Content Warning */}
-        {pageExceedsLimit && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <div className="text-sm text-red-700">
-              <p className="font-medium">Content exceeds 6-page limit</p>
-              <p>Please reduce your content to fit within 6 pages.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Line Count Warning */}
-        {exceedsLineLimit && (
-          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <AlertCircle className="w-5 h-5 text-yellow-600" />
-            <div className="text-sm text-yellow-700">
-              <p className="font-medium">Page line limit exceeded</p>
-              <p>Current: {currentLines} lines (max: {editorSettings.maxLinesPerPage})</p>
-            </div>
-          </div>
-        )}
         
         {/* Page Break Message */}
         {pageBreakMessage && (
@@ -637,11 +847,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           <div className="h-4 w-px bg-gray-300 mx-2" />
           
           <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>Lines: {currentLines}/{editorSettings.maxLinesPerPage}</span>
-            <span>Characters: {editor.storage.characterCount?.characters() || 0}</span>
-            <span className={remainingLines < 5 ? 'text-orange-600 font-medium' : ''}>
-              Remaining: {remainingLines} lines
-            </span>
+            <span>Characters: {editor.getText().length}</span>
           </div>
         </div>
 
@@ -688,25 +894,15 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   }
                   .ProseMirror p {
                     margin: 0;
-                    line-height: ${LINE_HEIGHT}px;
+                    line-height: ${editorSettings.lineHeight};
                   }
                   .ProseMirror p + p {
-                    margin-top: ${LINE_HEIGHT}px;
+                    margin-top: ${editorSettings.fontSize * 0.5}px;
                   }
                 `}</style>
                 <div className="relative z-10">
                   <EditorContent editor={editor} />
                 </div>
-                
-                {/* Line count indicator */}
-                <div className="absolute bottom-4 right-4 text-xs text-gray-500 bg-white px-2 py-1 rounded z-20">
-                  {currentLines}/{editorSettings.maxLinesPerPage} lines
-                </div>
-
-                {/* Visual indicator when approaching limit */}
-                {currentLines > editorSettings.maxLinesPerPage - 5 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-yellow-200 to-transparent opacity-50 z-20" />
-                )}
               </div>
             </div>
           </div>
@@ -825,13 +1021,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           </div>
           
           <div className="p-3 bg-purple-50 rounded-md">
-            <div className="text-lg font-semibold text-purple-600">{currentLines}</div>
-            <div className="text-sm text-purple-600">Current Lines</div>
+            <div className="text-lg font-semibold text-purple-600">{editor.getText().length}</div>
+            <div className="text-sm text-purple-600">Characters</div>
           </div>
           
           <div className="p-3 bg-orange-50 rounded-md">
-            <div className="text-lg font-semibold text-orange-600">{remainingLines}</div>
-            <div className="text-sm text-orange-600">Lines Left</div>
+            <div className="text-lg font-semibold text-orange-600">{getCurrentPageContent()?.length || 0}</div>
+            <div className="text-sm text-orange-600">Page Characters</div>
           </div>
         </div>
       </CardContent>
@@ -847,9 +1043,11 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
     setCurrentStep(0);
   };
   
+const { showWarning } = useToast();
+
   const handleNext = () => {
     if (!content || content.trim() === '') {
-      alert('Please write some content before proceeding.');
+      showWarning('Incomplete Content', 'Please write some content before proceeding.');
       return;
     }
     setCurrentStep(2);

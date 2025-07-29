@@ -9,7 +9,7 @@ import {
   disposeCanvas
 } from '@/lib/canvas-utils';
 import { useToast } from '@/hooks/useToast';
-import { INSTAGRAM_DIMENSIONS } from '@/lib/constants';
+import { STANDARD_DIMENSIONS } from '@/lib/constants';
 
 interface UseImageGenerationReturn {
   generateImage: (section: StorySection, format: 'square' | 'portrait') => Promise<HTMLCanvasElement>;
@@ -31,9 +31,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
     setError(null);
 
     try {
-      const dimensions = format === 'square' 
-        ? INSTAGRAM_DIMENSIONS.SQUARE 
-        : INSTAGRAM_DIMENSIONS.PORTRAIT;
+      // Use standard dimensions (900 × 1600) for both formats
+      const dimensions = STANDARD_DIMENSIONS;
       
       // Create canvas
       const canvas = createCanvas(dimensions.width, dimensions.height);
@@ -72,8 +71,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
       // Return a fallback canvas
       const canvas = document.createElement('canvas');
-      canvas.width = INSTAGRAM_DIMENSIONS.SQUARE.width;
-      canvas.height = INSTAGRAM_DIMENSIONS.SQUARE.height;
+      canvas.width = STANDARD_DIMENSIONS.width;
+      canvas.height = STANDARD_DIMENSIONS.height;
       const context = canvas.getContext('2d');
       if (context) {
         context.fillStyle = '#F0F0F0';

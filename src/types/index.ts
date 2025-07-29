@@ -11,6 +11,7 @@ export interface TextStyle {
   color: string;
   position: TextPosition;
   alignment: 'left' | 'center' | 'right';
+  verticalAlignment: 'top' | 'middle' | 'bottom';
 }
 
 export interface TextPosition {
@@ -30,10 +31,12 @@ export interface Page {
 }
 
 export interface EditorSettings {
-  maxLinesPerPage: number;
   fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
   textAlignment: 'left' | 'center' | 'right';
   globalTextAlignment: 'left' | 'center' | 'right';
+  verticalAlignment: 'top' | 'middle' | 'bottom';
 }
 
 export interface BackgroundTemplate {

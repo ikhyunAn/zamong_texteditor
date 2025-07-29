@@ -21,7 +21,8 @@ async function generateImageWithBackground(
   backgroundPath: string,
   textStyle: TextStyle,
   pageNumber: number,
-  globalAlignment?: 'left' | 'center' | 'right'
+  globalAlignment?: 'left' | 'center' | 'right',
+  title?: string
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const canvas = new fabric.Canvas(null, {
@@ -55,10 +56,31 @@ async function generateImageWithBackground(
       canvas.add(img);
       canvas.sendToBack(img);
 
-      // Add text
+      // Add story title to the first image
+      if (pageNumber === 1 && title) {
+        const titleText = new fabric.Textbox(title, {
+          left: EXPORT_DIMENSIONS.width * 0.1,
+          top: EXPORT_DIMENSIONS.height * 0.03,
+          width: EXPORT_DIMENSIONS.width * 0.8,
+          fontSize: Math.max(textStyle.fontSize + 6, 28), // Ensure minimum readable size
+          fontFamily: textStyle.fontFamily,
+          fontWeight: 'bold',
+          fill: textStyle.color,
+          textAlign: 'center', // Always center the title for better presentation
+          lineHeight: 1.2,
+          selectable: false,
+          evented: false
+        });
+
+        canvas.add(titleText);
+      }
+
+      // Add text content - adjust top position if title is present
+      const contentTopPosition = (pageNumber === 1 && title) ? EXPORT_DIMENSIONS.height * 0.15 : EXPORT_DIMENSIONS.height * 0.1;
+
       const text = new fabric.Textbox(page.content, {
         left: EXPORT_DIMENSIONS.width * 0.1,
-        top: EXPORT_DIMENSIONS.height * 0.1,
+        top: contentTopPosition,
         width: EXPORT_DIMENSIONS.width * 0.8,
         fontSize: textStyle.fontSize,
         fontFamily: textStyle.fontFamily,
@@ -111,6 +133,7 @@ export async function generateAllVersions(
   authorInfo: AuthorInfo,
   textStyle: TextStyle,
   globalAlignment?: 'left' | 'center' | 'right',
+  verticalAlignment?: 'top' | 'middle' | 'bottom',
   onProgress?: (progress: ExportProgress) => void
 ): Promise<Blob> {
   const zip = new JSZip();
@@ -142,7 +165,8 @@ export async function generateAllVersions(
         backgroundImage: background.path,
         dimensions: EXPORT_DIMENSIONS,
         pageNumber: i + 1,
-        globalAlignment
+        globalAlignment,
+        title: i === 0 ? authorInfo.title : undefined // Only add title to first page
       }));
       
       const results = await new Promise<any[]>((resolve, reject) => {
@@ -204,7 +228,8 @@ export async function generateAllVersions(
             background.path,
             textStyle,
             i + 1,
-            globalAlignment
+            globalAlignment,
+            i === 0 ? authorInfo.title : undefined // Only add title to first page
           );
 
           // Add to zip with proper naming
@@ -257,8 +282,10 @@ export async function previewPageWithBackground(
   page: Page,
   backgroundPath: string,
   textStyle: TextStyle,
-  globalAlignment?: 'left' | 'center' | 'right'
+  globalAlignment?: 'left' | 'center' | 'right',
+  title?: string,
+  pageNumber: number = 1
 ): Promise<string> {
-  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, 1, globalAlignment);
+  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, pageNumber, globalAlignment, title);
   return URL.createObjectURL(blob);
 }
