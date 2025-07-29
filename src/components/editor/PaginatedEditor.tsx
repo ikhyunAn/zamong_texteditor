@@ -667,7 +667,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 style={{
                   width: `${PAGE_WIDTH}px`,
                   height: `${PAGE_HEIGHT}px`,
-                  backgroundImage: 'url(/backgrounds/stage_1.png)',
+                  backgroundImage: 'url(/backgrounds/stage_3.png)',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundRepeat: 'no-repeat'
@@ -677,7 +677,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 <div 
                   className="absolute inset-0" 
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)'
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
                   }}
                 />
                 <style>{`
