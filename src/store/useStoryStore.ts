@@ -84,7 +84,8 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
   setContent: (content: string) => {
     // Simply set the content without auto-processing into pages
     // Individual page management will be handled separately
-    set({ content: content.trim() });
+    // Don't trim content to preserve formatting including leading/trailing newlines
+    set({ content: content });
   },
 
   setCurrentStep: (step: number) => {
@@ -243,7 +244,7 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     const random = Math.random().toString(36).substr(2, 9);
     const newPage: Page = {
       id: `page-${timestamp}-${random}`,
-      content: content && typeof content === 'string' ? content.trim() : '',
+      content: content && typeof content === 'string' ? content : '',
       backgroundTemplate: undefined
     };
     
@@ -420,7 +421,7 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     // For now, put all content on a single page unless manually split
     const pages: Page[] = [{
       id: `page-${Date.now()}-1`,
-      content: content.trim(),
+      content: content,
       backgroundTemplate: undefined
     }];
     set({ pages, currentPageIndex: 0 });

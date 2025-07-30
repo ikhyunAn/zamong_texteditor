@@ -8,7 +8,7 @@ export function autoSplitIntoSections(content: string): StorySection[] {
   // Split by double line breaks or paragraph tags
   const paragraphs = content
     .split(/\n\s*\n|\<\/p\>|\<br\s*\/?\>\s*\<br\s*\/?\>/)
-    .map(p => p.trim())
+    .map(p => p)
     .filter(p => p.length > 0);
 
   return paragraphs.map((paragraph, index) => ({
@@ -39,8 +39,7 @@ export function cleanHtmlContent(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, '\n\n') // Normalize excessive line breaks to double newlines
-    .replace(/^\n+|\n+$/g, '') // Trim leading and trailing newlines
-    .trim();
+    .replace(/^\n+|\n+$/g, ''); // Trim leading and trailing newlines only
 }
 
 /**
@@ -88,7 +87,7 @@ export function splitLongText(text: string, maxCharsPerSection: number = 300): s
       currentSection += (currentSection ? ' ' : '') + sentence;
     } else {
       if (currentSection) {
-        sections.push(currentSection.trim());
+        sections.push(currentSection);
         currentSection = sentence;
       } else {
         // Single sentence is too long, split by words
@@ -100,7 +99,7 @@ export function splitLongText(text: string, maxCharsPerSection: number = 300): s
             wordSection += (wordSection ? ' ' : '') + word;
           } else {
             if (wordSection) {
-              sections.push(wordSection.trim());
+              sections.push(wordSection);
               wordSection = word;
             } else {
               // Single word is too long, force split
@@ -118,7 +117,7 @@ export function splitLongText(text: string, maxCharsPerSection: number = 300): s
   }
   
   if (currentSection) {
-    sections.push(currentSection.trim());
+    sections.push(currentSection);
   }
   
   return sections;
@@ -146,7 +145,7 @@ export function removeSectionBreak(content: string, breakPosition: number): stri
 export function parseContentWithBreaks(content: string): StorySection[] {
   const sections = content
     .split('---SECTION_BREAK---')
-    .map(section => section.trim())
+    .map(section => section)
     .filter(section => section.length > 0);
     
   return sections.map((sectionContent, index) => ({
@@ -163,7 +162,7 @@ export function parseContentWithBreaks(content: string): StorySection[] {
  * Split content into pages - now puts all content on a single page without line limits
  */
 export function splitContentIntoPages(content: string): Page[] {
-  if (!content.trim()) {
+  if (!content || content.length === 0) {
     return [];
   }
 
@@ -172,7 +171,7 @@ export function splitContentIntoPages(content: string): Page[] {
   // Create a single page with all content, allowing user to decide page breaks
   const pages: Page[] = [{
     id: `page-1`,
-    content: cleanContent.trim(),
+    content: cleanContent,
     backgroundTemplate: undefined
   }];
 
@@ -183,9 +182,9 @@ export function splitContentIntoPages(content: string): Page[] {
  * Estimate line count for given content
  */
 export function estimateLineCount(content: string): number {
-  if (!content.trim()) return 0;
+  if (!content || content.length === 0) return 0;
   const cleanContent = cleanHtmlContent(content);
-  const lines = cleanContent.split('\n').filter(line => line.trim().length > 0);
+  const lines = cleanContent.split('\n');
   return lines.length;
 }
 
@@ -258,6 +257,7 @@ export function splitContentPreservingLineBreaks(content: string, position: numb
 
 /**
  * Convert plain text with line breaks to HTML format suitable for TipTap editor
+ * Enhanced to preserve all line breaks including consecutive ones
  */
 export function textToHtmlWithLineBreaks(text: string): string {
   if (!text.trim()) return '<p></p>';
@@ -270,22 +270,24 @@ export function textToHtmlWithLineBreaks(text: string): string {
       if (!paragraph.trim()) return '<p></p>';
       
       // Within each paragraph, convert single newlines to <br> tags
+      // Preserve empty lines by not trimming and not filtering them out
       const withBreaks = paragraph
         .split('\n')
-        .map(line => line.trim())
-        .filter((line, index, array) => {
-          // Keep empty lines only if they're not at the start or end
-          return line || (index > 0 && index < array.length - 1);
+        .map(line => {
+          // Don't trim lines to preserve leading/trailing spaces
+          // Replace empty lines with a single space to preserve structure
+          return line === '' ? ' ' : line;
         })
         .join('<br>');
       
-      return `<p>${withBreaks || '<br>'}</p>`;
+      return `<p>${withBreaks}</p>`;
     })
     .join('');
 }
 
 /**
  * Extract plain text from HTML while preserving line break structure
+ * Enhanced to better preserve whitespace and line structure
  */
 export function htmlToTextWithLineBreaks(html: string): string {
   return html
@@ -300,8 +302,10 @@ export function htmlToTextWithLineBreaks(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n') // Normalize excessive line breaks
-    .replace(/^\n+|\n+$/g, '') // Trim leading and trailing newlines
+    // Be more conservative with newline normalization to preserve structure
+    .replace(/\n{4,}/g, '\n\n\n') // Only normalize excessive line breaks (4+) to triple
+    .replace(/^\n+/g, '') // Trim leading newlines only
+    .replace(/\n+$/g, '') // Trim trailing newlines only
     .trim();
 }
 

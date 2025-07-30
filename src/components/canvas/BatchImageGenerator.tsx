@@ -90,7 +90,9 @@ export function BatchImageGenerator() {
           ...DEFAULT_TEXT_STYLE,
           alignment: editorSettings.globalTextAlignment || editorSettings.textAlignment || DEFAULT_TEXT_STYLE.alignment
         };
-        const text = new fabric.Textbox(page.content, {
+        // Ensure line breaks are preserved in the text content
+        const textContent = page.content || '';
+        const text = new fabric.Textbox(textContent, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.1,
           width: EXPORT_DIMENSIONS.width * 0.8,
