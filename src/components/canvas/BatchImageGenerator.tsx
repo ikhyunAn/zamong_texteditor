@@ -99,8 +99,17 @@ export function BatchImageGenerator() {
         const lineHeight = editorSettings.lineHeight || 1.5;
         
         
-        // Ensure line breaks are preserved in the text content
-        const textContent = section.content || '';
+        // Process text content for canvas rendering
+        let textContent = section.content || '';
+        
+        // When using line height > 1, double newlines create too much space
+        // Convert double newlines to single newlines to maintain paragraph separation
+        // without excessive spacing when combined with line height multiplier
+        if (lineHeight > 1.0) {
+          // Replace multiple consecutive newlines with single newline
+          textContent = textContent.replace(/\n{2,}/g, '\n');
+        }
+        
         const text = new fabric.Textbox(textContent, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.1,
@@ -383,7 +392,7 @@ export function BatchImageGenerator() {
     if (sections && sections.length > 0) {
       generatePreviews();
     }
-  }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, editorSettings.verticalAlignment, editorSettings.fontSize, backgroundPreview, generatePreviews]);
+  }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, editorSettings.verticalAlignment, editorSettings.fontSize, editorSettings.lineHeight, backgroundPreview, generatePreviews]);
 
   const handleBack = useCallback(() => {
     setCurrentStep(1);
