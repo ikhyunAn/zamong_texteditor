@@ -98,6 +98,41 @@ export function BatchImageGenerator() {
         // Also apply lineHeight from editorSettings
         const lineHeight = editorSettings.lineHeight || 1.5;
         
+        // Use consistent margins with the editor (60px padding)
+        const MARGIN = 60;
+        const contentWidth = EXPORT_DIMENSIONS.width - (MARGIN * 2);
+        const contentLeft = MARGIN;
+        
+        // Check if this is the first page (pageNumber === 1)
+        const isFirstPage = pageNumber === 1;
+        let topOffset = MARGIN;
+        
+        // Add title on the first page
+        if (isFirstPage && authorInfo.title) {
+          const titleText = new fabric.Text(authorInfo.title, {
+            left: contentLeft,
+            top: topOffset,
+            width: contentWidth,
+            fontSize: 40,
+            fontFamily: 'HakgyoansimBareonbatangB',
+            fill: textStyle.color || '#000000',
+            textAlign: editorSettings.globalTextAlignment || 'left',
+            selectable: false,
+            evented: false
+          });
+          
+          // Center the title horizontally based on alignment
+          if (editorSettings.globalTextAlignment === 'center') {
+            titleText.set({ left: EXPORT_DIMENSIONS.width / 2 - (titleText.width || 0) / 2 });
+          } else if (editorSettings.globalTextAlignment === 'right') {
+            titleText.set({ left: EXPORT_DIMENSIONS.width - MARGIN - (titleText.width || 0) });
+          }
+          
+          canvas.add(titleText);
+          
+          // Add spacing after title (using line height of title)
+          topOffset += 40 * 1.5 + 20; // title height * line height + extra spacing
+        }
         
         // Process text content for canvas rendering
         let textContent = section.content || '';
@@ -111,9 +146,9 @@ export function BatchImageGenerator() {
         }
         
         const text = new fabric.Textbox(textContent, {
-          left: EXPORT_DIMENSIONS.width * 0.1,
-          top: EXPORT_DIMENSIONS.height * 0.1,
-          width: EXPORT_DIMENSIONS.width * 0.8,
+          left: contentLeft,
+          top: topOffset,
+          width: contentWidth,
           fontSize: textStyle.fontSize,
           fontFamily: textStyle.fontFamily,
           fill: textStyle.color,
@@ -129,28 +164,44 @@ export function BatchImageGenerator() {
         
         // Wait for Fabric.js to calculate dimensions in the next tick
         setTimeout(() => {
-          // Now get the actual text height after line height has been applied
+          // Calculate total content height including title if on first page
           const textHeight = text.calcTextHeight() || text.height || 0;
-          let positionTop;
+          let totalContentHeight = textHeight;
+          let contentStartTop = topOffset;
+          
+          if (isFirstPage && authorInfo.title) {
+            // Include title height in total content calculation
+            const titleHeight = 40 * 1.5 + 20; // title font size * line height + spacing
+            totalContentHeight = textHeight + titleHeight;
+            contentStartTop = MARGIN; // Start from the margin
+          }
           
           // Use editorSettings.verticalAlignment as fallback if textStyle doesn't have it
           const verticalAlign = textStyle.verticalAlignment || editorSettings.verticalAlignment || 'top';
           
+          // Calculate vertical position based on alignment
+          let finalTopPosition;
           if (verticalAlign === 'top') {
-            positionTop = EXPORT_DIMENSIONS.height * 0.1;
+            finalTopPosition = contentStartTop;
           } else if (verticalAlign === 'bottom') {
-            positionTop = EXPORT_DIMENSIONS.height * 0.9 - textHeight;
+            finalTopPosition = EXPORT_DIMENSIONS.height - MARGIN - totalContentHeight;
           } else { // middle/center
-            positionTop = (EXPORT_DIMENSIONS.height - textHeight) / 2;
+            finalTopPosition = (EXPORT_DIMENSIONS.height - totalContentHeight) / 2;
           }
           
-          const positionLeft = (textStyle.position.x / 100) * EXPORT_DIMENSIONS.width;
-          
-          // Update position with correct calculations
-          text.set({
-            left: positionLeft - (text.width || 0) / 2,
-            top: positionTop
-          });
+          // Adjust text position
+          if (isFirstPage && authorInfo.title && verticalAlign !== 'top') {
+            // Reposition both title and text when not top-aligned
+            const titleElements = canvas.getObjects().filter(obj => obj.type === 'text');
+            if (titleElements.length > 0) {
+              titleElements[0].set({ top: finalTopPosition });
+              text.set({ top: finalTopPosition + 40 * 1.5 + 20 });
+            }
+          } else if (verticalAlign !== 'top') {
+            // Just reposition the text
+            text.set({ top: finalTopPosition });
+          }
+          // For top alignment, text is already in the correct position
           
           // Re-render canvas after positioning
           canvas.renderAll();
@@ -214,7 +265,7 @@ export function BatchImageGenerator() {
       }
 
     });
-  }, [editorSettings.lineHeight, backgroundPreview]);
+  }, [editorSettings, authorInfo, backgroundPreview]);
   
   
   // Function to generate preview images for all sections and backgrounds
