@@ -47,9 +47,17 @@ export function BatchImageGenerator() {
     sections,
     authorInfo,
     setCurrentStep,
-    editorSettings
+    editorSettings,
+    syncEditorSettingsToAllSections
   } = useStoryStore();
   const { showError, showSuccess } = useToast();
+  
+  // Ensure sections are synced with latest editor settings when component mounts
+  useEffect(() => {
+    if (sections && sections.length > 0) {
+      syncEditorSettingsToAllSections();
+    }
+  }, []); // Only run on mount
   
   // State for preview system
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
@@ -90,6 +98,7 @@ export function BatchImageGenerator() {
         // Also apply lineHeight from editorSettings
         const lineHeight = editorSettings.lineHeight || 1.5;
         
+        
         // Ensure line breaks are preserved in the text content
         const textContent = section.content || '';
         const text = new fabric.Textbox(textContent, {
@@ -115,9 +124,12 @@ export function BatchImageGenerator() {
           const textHeight = text.calcTextHeight() || text.height || 0;
           let positionTop;
           
-          if (textStyle.verticalAlignment === 'top') {
+          // Use editorSettings.verticalAlignment as fallback if textStyle doesn't have it
+          const verticalAlign = textStyle.verticalAlignment || editorSettings.verticalAlignment || 'top';
+          
+          if (verticalAlign === 'top') {
             positionTop = EXPORT_DIMENSIONS.height * 0.1;
-          } else if (textStyle.verticalAlignment === 'bottom') {
+          } else if (verticalAlign === 'bottom') {
             positionTop = EXPORT_DIMENSIONS.height * 0.9 - textHeight;
           } else { // middle/center
             positionTop = (EXPORT_DIMENSIONS.height - textHeight) / 2;
@@ -133,30 +145,30 @@ export function BatchImageGenerator() {
           
           // Re-render canvas after positioning
           canvas.renderAll();
-        }, 0);
-
-        // Text is already added to canvas above
-        canvas.renderAll();
-
-        // Convert canvas to data URL then to blob URL
-        const dataURL = canvas.toDataURL({
-          format: 'png',
-          quality: 1,
-          multiplier: 1
-        });
-        
-        // Convert data URL to blob URL
-        fetch(dataURL)
-          .then(res => res.blob())
-          .then(blob => {
-            const blobUrl = URL.createObjectURL(blob);
-            canvas.dispose();
-            resolve(blobUrl);
-          })
-          .catch(error => {
-            canvas.dispose();
-            reject(new Error('Failed to export canvas: ' + error.message));
-          });
+          
+          // Ensure the export happens after positioning is complete
+          setTimeout(() => {
+            // Convert canvas to data URL then to blob URL
+            const dataURL = canvas.toDataURL({
+              format: 'png',
+              quality: 1,
+              multiplier: 1
+            });
+            
+            // Convert data URL to blob URL
+            fetch(dataURL)
+              .then(res => res.blob())
+              .then(blob => {
+                const blobUrl = URL.createObjectURL(blob);
+                canvas.dispose();
+                resolve(blobUrl);
+              })
+              .catch(error => {
+                canvas.dispose();
+                reject(new Error('Failed to export canvas: ' + error.message));
+              });
+          }, 50); // Small delay to ensure rendering is complete
+        }, 10); // Slightly longer delay for initial calculation
       };
 
       // Only load background image if backgroundPreview is enabled
@@ -371,7 +383,7 @@ export function BatchImageGenerator() {
     if (sections && sections.length > 0) {
       generatePreviews();
     }
-  }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, backgroundPreview, generatePreviews]);
+  }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, editorSettings.verticalAlignment, editorSettings.fontSize, backgroundPreview, generatePreviews]);
 
   const handleBack = useCallback(() => {
     setCurrentStep(1);
