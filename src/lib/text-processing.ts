@@ -267,7 +267,7 @@ export function textToHtmlWithLineBreaks(text: string): string {
   
   return paragraphs
     .map(paragraph => {
-      if (!paragraph.trim()) return '<p></p>';
+      if (!paragraph.trim()) return ' 3cp 3e 3cbr 3e 3c/p 3e';
       
       // Within each paragraph, convert single newlines to <br> tags
       // Preserve empty lines by not trimming and not filtering them out
