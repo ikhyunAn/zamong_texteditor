@@ -113,7 +113,7 @@ export function BatchImageGenerator() {
             left: contentLeft,
             top: topOffset,
             width: contentWidth,
-            fontSize: 40,
+            fontSize: 60,
             fontFamily: 'HakgyoansimBareonbatangB',
             fill: textStyle.color || '#000000',
             textAlign: editorSettings.globalTextAlignment || 'left',
@@ -131,7 +131,7 @@ export function BatchImageGenerator() {
           canvas.add(titleText);
           
           // Add spacing after title (using line height of title)
-          topOffset += 40 * 1.5 + 20; // title height * line height + extra spacing
+          topOffset += 60 * 1.5 + 20; // title height * line height + extra spacing
         }
         
         // Process text content for canvas rendering
@@ -171,7 +171,7 @@ export function BatchImageGenerator() {
           
           if (isFirstPage && authorInfo.title) {
             // Include title height in total content calculation
-            const titleHeight = 40 * 1.5 + 20; // title font size * line height + spacing
+            const titleHeight = 60 * 1.5 + 20; // title font size * line height + spacing
             totalContentHeight = textHeight + titleHeight;
             contentStartTop = MARGIN; // Start from the margin
           }
@@ -195,7 +195,7 @@ export function BatchImageGenerator() {
             const titleElements = canvas.getObjects().filter(obj => obj.type === 'text');
             if (titleElements.length > 0) {
               titleElements[0].set({ top: finalTopPosition });
-              text.set({ top: finalTopPosition + 40 * 1.5 + 20 });
+              text.set({ top: finalTopPosition + 60 * 1.5 + 20 });
             }
           } else if (verticalAlign !== 'top') {
             // Just reposition the text

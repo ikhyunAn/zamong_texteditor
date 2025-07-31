@@ -60,7 +60,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     setVerticalAlignment,
     increaseFontSize,
     decreaseFontSize,
-    setLineHeight
+    setLineHeight,
+    authorInfo
   } = useStoryStore();
   const { 
     totalPages, 
@@ -925,8 +926,39 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                     margin-top: 0;
                   }
                 `}</style>
-                <div className="relative z-10">
-                  <EditorContent editor={editor} />
+                <div className="relative z-10 h-full" style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: editorSettings.verticalAlignment === 'top' ? 'flex-start' : 
+                                   editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'
+                }}>
+                  {/* Non-editable title section - only show on first page */}
+                  {currentPageIndex === 0 && authorInfo.title && (
+                    <div 
+                      className="px-[60px] pt-[60px] pb-5"
+                      style={{
+                        fontFamily: 'HakgyoansimBareonbatangB',
+                        fontSize: '60px',
+                        color: '#333',
+                        textAlign: editorSettings.textAlignment,
+                        lineHeight: '1.5',
+                        pointerEvents: 'none',
+                        userSelect: 'none'
+                      }}
+                    >
+                      {authorInfo.title}
+                    </div>
+                  )}
+                  
+                  {/* Editor content with adjusted padding */}
+                  <div style={{
+                    paddingTop: currentPageIndex === 0 && authorInfo.title ? '0' : undefined,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <EditorContent editor={editor} />
+                  </div>
                 </div>
               </div>
             </div>
