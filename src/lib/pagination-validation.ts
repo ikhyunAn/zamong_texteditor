@@ -171,7 +171,7 @@ class PaginationValidator {
   /**
    * Detects potential pagination issues
    */
-  detectAnomalies(pages: Page[], currentIndex: number): string[] {
+  detectAnomalies(pages: Page[]): string[] {
     const anomalies: string[] = [];
 
     // Check for empty pages in the middle
@@ -253,4 +253,4 @@ export const logNavigation = (action: string, from: number, to: number, success:
   paginationValidator.logNavigation(action, from, to, success, error);
 export const logPageState = (label: string, state: any) => paginationValidator.logPageState(label, state);
 export const detectAnomalies = (pages: Page[], currentIndex: number) => 
-  paginationValidator.detectAnomalies(pages, currentIndex);
+  paginationValidator.detectAnomalies(pages);

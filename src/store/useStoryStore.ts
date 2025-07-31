@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { StoryState, AuthorInfo, Page, EditorSettings, StorySection, TextStyle } from '@/types';
-import { splitContentIntoPages } from '@/lib/text-processing';
-import { parseHtmlToSections } from '@/lib/content-parser';
 
 interface StoryStore extends StoryState {
   // Actions
@@ -426,7 +424,7 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
 
   syncPagesToSections: () => {
     const { pages, editorSettings } = get();
-    const sections = pages.map((page, index) => ({
+    const sections = pages.map((page) => ({
       id: page.id.replace('page-', 'section-'),
       content: page.content,
       textStyle: { 

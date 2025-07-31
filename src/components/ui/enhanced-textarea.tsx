@@ -118,7 +118,6 @@ const EnhancedTextarea = forwardRef<EnhancedTextareaRef, EnhancedTextareaProps>(
     // Enhanced onChange handler
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const textarea = e.target;
-      const newValue = textarea.value;
       
       // Store cursor position before change
       const currentStart = textarea.selectionStart;

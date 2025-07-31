@@ -54,7 +54,7 @@ export function StoryEditor() {
       <CardHeader>
         <CardTitle>Write Your Story</CardTitle>
         <CardDescription>
-          Write your story for "{authorInfo.title}". Use the formatting tools to make it beautiful.
+          Write your story for &quot;{authorInfo.title}&quot;. Use the formatting tools to make it beautiful.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

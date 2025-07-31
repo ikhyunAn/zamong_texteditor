@@ -67,7 +67,7 @@ export function useEditorSettings() {
   }, [resetToDefaults]);
 
   // Migrate legacy settings
-  const migrateSettings = useCallback((legacySettings: any) => {
+  const migrateSettings = useCallback((legacySettings: unknown) => {
     return validateAndMigrateSettings(legacySettings);
   }, [validateAndMigrateSettings]);
 
@@ -157,7 +157,7 @@ export function useEditorSettings() {
 export function useSettingsMigration() {
   const { validateAndMigrateSettings } = useStoryStore();
 
-  const checkAndMigrate = useCallback(async (existingSettings?: any) => {
+  const checkAndMigrate = useCallback(async (existingSettings?: unknown) => {
     if (!existingSettings) {
       return null;
     }

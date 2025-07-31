@@ -18,7 +18,6 @@ export function SettingsManager({
 }: SettingsManagerProps) {
   const {
     settings,
-    updateSettings,
     saveSettings,
     resetToDefaults,
     clearStoredSettings,
@@ -71,6 +70,7 @@ export function SettingsManager({
         onSettingsChange(result.settings!);
       }
     } catch (error) {
+      console.error('Settings upload error:', error);
       setImportStatus({
         success: false,
         message: 'Failed to upload settings'
@@ -93,7 +93,7 @@ export function SettingsManager({
     const result = await checkAndMigrate(legacySettings);
     if (result) {
       setMigrationStatus({
-        wasMigrated: result.wasMigrated,
+        wasMigrated: result.wasMigrated || false,
         migrationLog: result.wasMigrated ? ['Settings migrated successfully'] : ['No migration needed']
       });
     }

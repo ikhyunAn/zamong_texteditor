@@ -135,7 +135,7 @@ export function insertSectionBreak(content: string, position: number): string {
 /**
  * Remove a section break marker
  */
-export function removeSectionBreak(content: string, breakPosition: number): string {
+export function removeSectionBreak(content: string): string {
   return content.replace(/\n\n---SECTION_BREAK---\n\n/, '\n\n');
 }
 

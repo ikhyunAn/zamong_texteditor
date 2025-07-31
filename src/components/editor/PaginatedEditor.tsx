@@ -44,8 +44,6 @@ interface PaginatedEditorProps {
 const PAGE_WIDTH = 900;
 const PAGE_HEIGHT = 1600;
 const PAGE_PADDING = 60;
-const LINE_HEIGHT = 32;
-const FONT_SIZE = 18;
 
 const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   const { 
@@ -54,7 +52,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     pages, 
     currentPageIndex,
     getCurrentPageContent,
-    setCurrentPageContent,
     initializeWithEmptyPage,
     setTextAlignment,
     setVerticalAlignment,

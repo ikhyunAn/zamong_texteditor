@@ -4,7 +4,11 @@ import { EditorSettings } from '@/types';
 const EDITOR_SETTINGS_KEY = 'zamong-editor-settings';
 
 /**
- * Default editor settings that match the store's initial state
+ * Default editor settings that match the store's initiexport function migrateProjectSettings(existingSettings: unknown): {
+  settings: EditorSettings;
+  wasMigrated: boolean;
+  migrationLog: string[];
+} {ate
  */
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   fontFamily: 'CustomFontTTF',
@@ -43,48 +47,50 @@ export function validateEditorSettings(
  * @param legacySettings Settings from older versions
  * @returns Migrated and validated settings
  */
-export function migrateEditorSettings(legacySettings: any): EditorSettings {
+export function migrateEditorSettings(legacySettings: unknown): EditorSettings {
   // Handle cases where settings might be undefined or null
   if (!legacySettings || typeof legacySettings !== 'object') {
     return { ...DEFAULT_EDITOR_SETTINGS };
   }
 
+  // Type guard to safely access properties
+  const settings = legacySettings as Record<string, unknown>;
   const migrated: Partial<EditorSettings> = {};
 
   // Font family migration
-  if (legacySettings.fontFamily && typeof legacySettings.fontFamily === 'string') {
-    migrated.fontFamily = legacySettings.fontFamily;
+  if (settings.fontFamily && typeof settings.fontFamily === 'string') {
+    migrated.fontFamily = settings.fontFamily;
   }
 
   // Font size migration with validation
-  if (typeof legacySettings.fontSize === 'number' && legacySettings.fontSize > 0) {
-    migrated.fontSize = Math.max(8, Math.min(72, legacySettings.fontSize));
+  if (typeof settings.fontSize === 'number' && settings.fontSize > 0) {
+    migrated.fontSize = Math.max(8, Math.min(72, settings.fontSize));
   }
 
   // Line height migration with validation
-  if (typeof legacySettings.lineHeight === 'number' && legacySettings.lineHeight > 0) {
-    migrated.lineHeight = Math.max(1.0, Math.min(3.0, legacySettings.lineHeight));
+  if (typeof settings.lineHeight === 'number' && settings.lineHeight > 0) {
+    migrated.lineHeight = Math.max(1.0, Math.min(3.0, settings.lineHeight));
   }
 
   // Text alignment migration
-  if (legacySettings.textAlignment && 
-      ['left', 'center', 'right'].includes(legacySettings.textAlignment)) {
-    migrated.textAlignment = legacySettings.textAlignment;
+  if (settings.textAlignment && 
+      ['left', 'center', 'right'].includes(settings.textAlignment as string)) {
+    migrated.textAlignment = settings.textAlignment as 'left' | 'center' | 'right';
   }
 
   // Global text alignment migration (new field, fall back to textAlignment if not present)
-  if (legacySettings.globalTextAlignment && 
-      ['left', 'center', 'right'].includes(legacySettings.globalTextAlignment)) {
-    migrated.globalTextAlignment = legacySettings.globalTextAlignment;
+  if (settings.globalTextAlignment && 
+      ['left', 'center', 'right'].includes(settings.globalTextAlignment as string)) {
+    migrated.globalTextAlignment = settings.globalTextAlignment as 'left' | 'center' | 'right';
   } else if (migrated.textAlignment) {
     // For backward compatibility, use textAlignment as globalTextAlignment
     migrated.globalTextAlignment = migrated.textAlignment;
   }
 
   // Vertical alignment migration
-  if (legacySettings.verticalAlignment && 
-      ['top', 'middle', 'bottom'].includes(legacySettings.verticalAlignment)) {
-    migrated.verticalAlignment = legacySettings.verticalAlignment;
+  if (settings.verticalAlignment && 
+      ['top', 'middle', 'bottom'].includes(settings.verticalAlignment as string)) {
+    migrated.verticalAlignment = settings.verticalAlignment as 'top' | 'middle' | 'bottom';
   }
 
   return validateEditorSettings(migrated);

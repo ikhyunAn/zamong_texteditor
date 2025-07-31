@@ -33,7 +33,7 @@ async function generateImageWithBackground(
     });
 
     // Load background image
-    // @ts-ignore - Fabric types issue
+    // @ts-expect-error - Fabric types issue
     fabric.Image.fromURL(backgroundPath, (img) => {
       if (!img) {
         reject(new Error('Failed to load background image'));

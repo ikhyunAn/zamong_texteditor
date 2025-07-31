@@ -3,10 +3,13 @@
  * Handles canvas generation in a separate thread to prevent UI blocking
  */
 
+// Import types
+import { TextStyle } from '@/types';
+
 interface ExportTask {
   id: string;
   sectionContent: string;
-  textStyle: any;
+  textStyle: TextStyle;
   editorSettings?: {
     fontSize: number;
     fontFamily: string;
@@ -53,7 +56,7 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
     // Configure text style - prioritize editorSettings over textStyle
     const fontSize = task.editorSettings?.fontSize || task.textStyle.fontSize || 24;
     const fontFamily = task.editorSettings?.fontFamily || task.textStyle.fontFamily || 'Arial';
-    const lineHeight = task.editorSettings?.lineHeight || task.textStyle.lineHeight || 1.5;
+    const lineHeight = task.editorSettings?.lineHeight || 1.5;
     const padding = 80;
 
     ctx.font = `${fontSize}px ${fontFamily}`;

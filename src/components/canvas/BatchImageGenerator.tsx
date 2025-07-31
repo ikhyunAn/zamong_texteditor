@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fabric } from 'fabric';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
+import type { StorySection } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,14 +49,14 @@ export function BatchImageGenerator() {
     authorInfo,
     setCurrentStep,
     editorSettings,
-    syncEditorSettingsToAllSections
+    syncEditorSettingsToSections
   } = useStoryStore();
   const { showError, showSuccess } = useToast();
   
   // Ensure sections are synced with latest editor settings when component mounts
   useEffect(() => {
     if (sections && sections.length > 0) {
-      syncEditorSettingsToAllSections();
+      syncEditorSettingsToSections();
     }
   }, []); // Only run on mount
   
@@ -81,13 +82,14 @@ export function BatchImageGenerator() {
   
   // Function to generate image with background
   const generateImageWithBackground = useCallback(async (
-    section: any,
+    section: StorySection,
     backgroundPath: string,
     pageNumber: number,
     backgroundId?: string
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const canvas = new fabric.Canvas(null, {
+      const canvasElement = document.createElement('canvas');
+      const canvas = new fabric.Canvas(canvasElement, {
         width: EXPORT_DIMENSIONS.width,
         height: EXPORT_DIMENSIONS.height,
         backgroundColor: '#ffffff'
@@ -328,6 +330,7 @@ export function BatchImageGenerator() {
         }
       }
     } catch (error) {
+      console.error('Preview generation error:', error);
       showError('Preview Error', 'Failed to generate previews');
     } finally {
       setIsGeneratingPreviews(false);

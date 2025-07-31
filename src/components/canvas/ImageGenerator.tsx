@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { fabric } from 'fabric';
+
+// Type for fabric canvas - using Record for flexibility with fabric.js API
+type FabricCanvas = Record<string, unknown> & {
+  getObjects(type?: string): unknown[];
+  add(object: unknown): void;
+  clear(): void;
+  dispose(): void;
+  renderAll(): void;
+}
 import { useStoryStore } from '@/store/useStoryStore';
-import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { useZipDownload } from '@/hooks/useZipDownload';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,10 +41,9 @@ import { STANDARD_DIMENSIONS } from '@/lib/constants';
 export function ImageGenerator() {
   const { 
     sections, 
-    authorInfo, 
     updateSectionTextStyle, 
     setCurrentStep,
-    syncEditorSettingsToAllSections,
+    syncEditorSettingsToSections,
     editorSettings 
   } = useStoryStore();
   const { showError } = useToast();
@@ -66,7 +73,7 @@ export function ImageGenerator() {
   
   const { generateAndDownloadZip, isGenerating: isDownloading, progress, error: downloadError } = useZipDownload();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const fabricCanvasRef = useRef<any>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
 
   const currentSection = sections[currentSectionIndex];
   // Use standard dimensions (900 × 1600) for both formats
@@ -179,10 +186,10 @@ export function ImageGenerator() {
 
 
   useEffect(() => {
-    syncEditorSettingsToAllSections();
-  }, [editorSettings, syncEditorSettingsToAllSections]);
+    syncEditorSettingsToSections();
+  }, [editorSettings, syncEditorSettingsToSections]);
 
-  const loadCanvasContent = async (canvas: any, section: typeof currentSection, signal?: AbortSignal) => {
+  const loadCanvasContent = async (canvas: FabricCanvas, section: typeof currentSection, signal?: AbortSignal) => {
     try {
       // Check if aborted before starting
       if (signal?.aborted) return;
@@ -214,10 +221,10 @@ export function ImageGenerator() {
       showError('Canvas Error', error instanceof Error ? error.message : 'Failed to load canvas content');
       
       // Display fallback UI directly on canvas
-      const context = canvas.getContext();
+      const context = (canvas as unknown as { getContext(): CanvasRenderingContext2D }).getContext();
       if (context) {
         canvas.clear();
-        const canvasElement = canvas.getElement();
+        const canvasElement = (canvas as unknown as { getElement(): HTMLCanvasElement }).getElement();
         const ctx = canvasElement.getContext('2d');
         if (ctx) {
           ctx.fillStyle = '#F5F5F5';
@@ -239,8 +246,8 @@ export function ImageGenerator() {
     }
   };
 
-  const handleStyleChange = (styleUpdates: Partial<typeof currentSection.textStyle>) => {
-    syncEditorSettingsToAllSections();
+  const handleStyleChange = () => {
+    syncEditorSettingsToSections();
   };
 
   const handlePositionChange = (position: { x: number; y: number }) => {
@@ -250,7 +257,7 @@ export function ImageGenerator() {
     if (fabricCanvasRef.current) {
       const textObjects = fabricCanvasRef.current.getObjects('textbox');
       if (textObjects.length > 0) {
-        const textbox = textObjects[0] as any;
+        const textbox = textObjects[0] as Record<string, unknown> & { set(options: Record<string, unknown>): void };
         const left = (position.x / 100) * dimensions.width;
         const top = (position.y / 100) * dimensions.height;
         
@@ -406,7 +413,7 @@ export function ImageGenerator() {
             </div>
             
             <div className="text-sm text-gray-600">
-              "{currentSection.content.substring(0, 30)}..."
+              &quot;{currentSection.content.substring(0, 30)}...&quot;
             </div>
           </div>
         </CardContent>

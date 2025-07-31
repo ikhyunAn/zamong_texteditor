@@ -1,6 +1,0 @@
-<svg width="900" height="1600" xmlns="http://www.w3.org/2000/svg">
-  <rect width="900" height="1600" fill="#E5F3FF" stroke="#ddd" stroke-width="2"/>
-  <text x="450" y="800" font-family="Arial" font-size="48" fill="#999" text-anchor="middle">Stage 2</text>
-  <text x="450" y="860" font-family="Arial" font-size="24" fill="#999" text-anchor="middle">Test Background</text>
-  <text x="450" y="900" font-family="Arial" font-size="24" fill="#999" text-anchor="middle">900 × 1600px</text>
-</svg>

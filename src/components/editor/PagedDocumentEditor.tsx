@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
 import { usePageManager } from '@/hooks/usePageManager';
 import { AVAILABLE_FONTS } from '@/lib/constants';
@@ -22,12 +22,6 @@ import {
   AlignRight
 } from 'lucide-react';
 
-interface Page {
-  id: string;
-  content: string;
-  lineCount: number;
-}
-
 interface PagedDocumentEditorProps {
   className?: string;
 }
@@ -37,8 +31,6 @@ const PAGE_HEIGHT = 1600;
 const PAGE_PADDING = 60;
 const LINE_HEIGHT = 32; // pixels per line
 const FONT_SIZE = 18;
-const MAX_LINES_PER_PAGE = 40; // Calculated to fit within 1600px height with padding
-const CHARACTERS_PER_LINE = 50; // Average characters per line at 900px width
 
 // Font metrics cache to avoid recreating canvas contexts
 class FontMetricsCache {
@@ -122,27 +114,17 @@ const lineCalculationCache = new LineCalculationCache();
 
 const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) => {
   const { 
-    content, 
-    setContent, 
     editorSettings, 
-    sections, 
-    setSections, 
-    setCurrentStep,
     pages,
     currentPageIndex,
     getCurrentPageContent,
-    setCurrentPageContent,
-    addEmptyPage,
     initializeWithEmptyPage,
-    syncPagesToSections,
     setTextAlignment
   } = useStoryStore();
   
   const {
-    totalPages,
     getPageInfo,
     checkPageLimits,
-    calculateLineCount: pageManagerCalculateLineCount,
     navigateToPage,
     addNewPage,
     updateCurrentPageContent
@@ -151,7 +133,6 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
 const [showLineWarning, setShowLineWarning] = useState(false);
   const [backgroundPreview, setBackgroundPreview] = useState(true);
-  const [isPending, startTransition] = useTransition();
   
   // Initialize with an empty page if no pages exist
   useEffect(() => {
@@ -171,7 +152,6 @@ const [showLineWarning, setShowLineWarning] = useState(false);
   // Get current page info from page manager
   const pageInfo = getPageInfo();
   const currentPageContent = getCurrentPageContent() || '';
-  const currentLines = pageManagerCalculateLineCount(currentPageContent);
   const limitCheck = checkPageLimits();
   
   // Show warning when exceeding page limits
@@ -276,13 +256,6 @@ const [showLineWarning, setShowLineWarning] = useState(false);
             <span>
               Page Content: {pages[currentPageIndex]?.content?.length || 0} characters
             </span>
-            {/* Processing indicator */}
-            {isPending && (
-              <span className="flex items-center gap-1 text-blue-600">
-                <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin" />
-                Processing...
-              </span>
-            )}
           </div>
         </div>
       </CardHeader>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, AlertCircle, Download, ZoomIn, X } from 'lucide-react';
+import { CheckCircle, Clock, Download, ZoomIn, X } from 'lucide-react';
 
 interface ExportProgressProps {
   current: number;
