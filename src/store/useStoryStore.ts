@@ -151,6 +151,22 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     });
   },
 
+  syncEditorSettingsToAllSections: () => {
+    const { sections, editorSettings } = get();
+    const updatedSections = sections.map(section => ({
+      ...section,
+      textStyle: {
+        ...section.textStyle,
+        fontFamily: editorSettings.fontFamily,
+        fontSize: editorSettings.fontSize,
+        alignment: editorSettings.globalTextAlignment,
+        verticalAlignment: editorSettings.verticalAlignment
+        // Note: lineHeight is not a property of TextStyle, it's only used in canvas rendering
+      }
+    }));
+    set({ sections: updatedSections });
+  },
+
   // Page management actions
   setPages: (pages: Page[]) => {
     // Ensure pages array is properly validated and immutable

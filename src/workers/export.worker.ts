@@ -7,6 +7,11 @@ interface ExportTask {
   id: string;
   sectionContent: string;
   textStyle: any;
+  editorSettings?: {
+    fontSize: number;
+    fontFamily: string;
+    lineHeight: number;
+  };
   backgroundImage?: string;
   dimensions: { width: number; height: number };
   pageNumber: number;
@@ -45,10 +50,10 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
       ctx.fillRect(0, 0, task.dimensions.width, task.dimensions.height);
     }
 
-    // Configure text style
-    const fontSize = task.textStyle.fontSize || 24;
-    const fontFamily = task.textStyle.fontFamily || 'Arial';
-    const lineHeight = task.textStyle.lineHeight || 1.6;
+    // Configure text style - prioritize editorSettings over textStyle
+    const fontSize = task.editorSettings?.fontSize || task.textStyle.fontSize || 24;
+    const fontFamily = task.editorSettings?.fontFamily || task.textStyle.fontFamily || 'Arial';
+    const lineHeight = task.editorSettings?.lineHeight || task.textStyle.lineHeight || 1.5;
     const padding = 80;
 
     ctx.font = `${fontSize}px ${fontFamily}`;
@@ -59,10 +64,13 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
     const maxWidth = task.dimensions.width - (padding * 2);
     const lines = wrapText(ctx, task.sectionContent, maxWidth);
     
+    // Calculate actual line spacing using fontSize * lineHeight
+    const actualLineSpacing = fontSize * lineHeight;
     let y = padding + fontSize;
+    
     lines.forEach(line => {
       ctx.fillText(line, padding, y);
-      y += fontSize * lineHeight;
+      y += actualLineSpacing;
     });
 
     // Convert to blob and then to data URL

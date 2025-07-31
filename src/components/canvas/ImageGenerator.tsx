@@ -36,6 +36,7 @@ export function ImageGenerator() {
     authorInfo, 
     updateSectionTextStyle, 
     setCurrentStep,
+    syncEditorSettingsToAllSections,
     editorSettings 
   } = useStoryStore();
   const { showError } = useToast();
@@ -176,6 +177,11 @@ export function ImageGenerator() {
     }
   }, [currentSectionIndex, canvasFormat, currentSection, dimensions, showError, editorSettings.globalTextAlignment]);
 
+
+  useEffect(() => {
+    syncEditorSettingsToAllSections();
+  }, [editorSettings, syncEditorSettingsToAllSections]);
+
   const loadCanvasContent = async (canvas: any, section: typeof currentSection, signal?: AbortSignal) => {
     try {
       // Check if aborted before starting
@@ -192,6 +198,7 @@ export function ImageGenerator() {
       const textConfig: CanvasTextConfig = {
         text: section.content,
         textStyle: section.textStyle,
+        editorSettings: editorSettings,
         canvasWidth: dimensions.width,
         canvasHeight: dimensions.height,
         globalAlignment: editorSettings.globalTextAlignment
@@ -216,34 +223,24 @@ export function ImageGenerator() {
           ctx.fillStyle = '#F5F5F5';
           ctx.fillRect(0, 0, dimensions.width, dimensions.height);
           ctx.fillStyle = '#9CA3AF';
-          ctx.font = '24px Arial';
+          ctx.font = `${editorSettings.fontSize}px ${editorSettings.fontFamily}`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('Preview unavailable', dimensions.width / 2, dimensions.height / 2 - 20);
-          ctx.font = '16px Arial';
-          ctx.fillText('Canvas failed to load', dimensions.width / 2, dimensions.height / 2 + 20);
+          
+          // Calculate line spacing using fontSize * lineHeight
+          const lineSpacing = editorSettings.fontSize * editorSettings.lineHeight;
+          const halfLineSpacing = lineSpacing / 2;
+          
+          ctx.fillText('Preview unavailable', dimensions.width / 2, dimensions.height / 2 - halfLineSpacing);
+          ctx.font = `${Math.max(editorSettings.fontSize - 8, 12)}px ${editorSettings.fontFamily}`;
+          ctx.fillText('Canvas failed to load', dimensions.width / 2, dimensions.height / 2 + halfLineSpacing);
         }
       }
     }
   };
 
   const handleStyleChange = (styleUpdates: Partial<typeof currentSection.textStyle>) => {
-    updateSectionTextStyle(currentSection.id, styleUpdates);
-    
-    // Update the canvas immediately
-    if (fabricCanvasRef.current) {
-      const textObjects = fabricCanvasRef.current.getObjects('textbox');
-      if (textObjects.length > 0) {
-        const textbox = textObjects[0] as any;
-        
-        if (styleUpdates.fontFamily) textbox.set('fontFamily', styleUpdates.fontFamily);
-        if (styleUpdates.fontSize) textbox.set('fontSize', styleUpdates.fontSize);
-        if (styleUpdates.color) textbox.set('fill', styleUpdates.color);
-        if (styleUpdates.alignment) textbox.set('textAlign', styleUpdates.alignment);
-        
-        safeRender(fabricCanvasRef.current);
-      }
-    }
+    syncEditorSettingsToAllSections();
   };
 
   const handlePositionChange = (position: { x: number; y: number }) => {
@@ -282,6 +279,7 @@ export function ImageGenerator() {
           const textConfig: CanvasTextConfig = {
             text: section.content,
             textStyle: section.textStyle,
+            editorSettings: editorSettings,
             canvasWidth: dimensions.width,
             canvasHeight: dimensions.height,
             globalAlignment: editorSettings.globalTextAlignment
@@ -305,12 +303,17 @@ export function ImageGenerator() {
             ctx.fillStyle = '#F5F5F5';
             ctx.fillRect(0, 0, fallbackCanvas.width, fallbackCanvas.height);
             ctx.fillStyle = '#9CA3AF';
-            ctx.font = '24px Arial';
+            ctx.font = `${editorSettings.fontSize}px ${editorSettings.fontFamily}`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Image unavailable', fallbackCanvas.width / 2, fallbackCanvas.height / 2 - 20);
-            ctx.font = '16px Arial';
-            ctx.fillText(`Section ${i + 1}`, fallbackCanvas.width / 2, fallbackCanvas.height / 2 + 20);
+            
+            // Calculate line spacing using fontSize * lineHeight
+            const lineSpacing = editorSettings.fontSize * editorSettings.lineHeight;
+            const halfLineSpacing = lineSpacing / 2;
+            
+            ctx.fillText('Image unavailable', fallbackCanvas.width / 2, fallbackCanvas.height / 2 - halfLineSpacing);
+            ctx.font = `${Math.max(editorSettings.fontSize - 8, 12)}px ${editorSettings.fontFamily}`;
+            ctx.fillText(`Section ${i + 1}`, fallbackCanvas.width / 2, fallbackCanvas.height / 2 + halfLineSpacing);
           }
           
           // Convert fallback canvas to blob

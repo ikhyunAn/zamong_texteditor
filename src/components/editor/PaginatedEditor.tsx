@@ -1062,7 +1062,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 
 // Add navigation section wrapper
 const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ className }) => {
-  const { setCurrentStep, content } = useStoryStore();
+  const { setCurrentStep, content, syncPagesToSections } = useStoryStore();
   
   const { showWarning } = useToast();
 
@@ -1071,6 +1071,8 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
       showWarning('Incomplete Content', 'Please write some content before proceeding.');
       return;
     }
+    // Sync pages to sections before going to image generation
+    syncPagesToSections();
     setCurrentStep(2);
   };
   

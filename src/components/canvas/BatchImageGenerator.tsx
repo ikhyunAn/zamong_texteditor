@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fabric } from 'fabric';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
@@ -44,7 +44,7 @@ interface ExportProgress {
 
 export function BatchImageGenerator() {
   const { 
-    pages,
+    sections,
     authorInfo,
     setCurrentStep,
     editorSettings
@@ -72,8 +72,8 @@ export function BatchImageGenerator() {
   }, []);
   
   // Function to generate image with background
-  const generateImageWithBackground = async (
-    page: any,
+  const generateImageWithBackground = useCallback(async (
+    section: any,
     backgroundPath: string,
     pageNumber: number
   ): Promise<string> => {
@@ -85,13 +85,13 @@ export function BatchImageGenerator() {
       });
 
       const addTextAndRender = () => {
-        // Add text with global alignment from editor settings
-        const textStyle = {
-          ...DEFAULT_TEXT_STYLE,
-          alignment: editorSettings.globalTextAlignment || editorSettings.textAlignment || DEFAULT_TEXT_STYLE.alignment
-        };
+        // Use the section's textStyle which has been synced with editorSettings
+        const textStyle = section.textStyle || DEFAULT_TEXT_STYLE;
+        // Also apply lineHeight from editorSettings
+        const lineHeight = editorSettings.lineHeight || 1.5;
+        
         // Ensure line breaks are preserved in the text content
-        const textContent = page.content || '';
+        const textContent = section.content || '';
         const text = new fabric.Textbox(textContent, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.1,
@@ -100,22 +100,42 @@ export function BatchImageGenerator() {
           fontFamily: textStyle.fontFamily,
           fill: textStyle.color,
           textAlign: textStyle.alignment,
-          lineHeight: 1.5,
+          lineHeight: lineHeight,
           splitByGrapheme: true,
           selectable: false,
           evented: false
         });
 
-        // Position text based on style
-        const positionLeft = (textStyle.position.x / 100) * EXPORT_DIMENSIONS.width;
-        const positionTop = (textStyle.position.y / 100) * EXPORT_DIMENSIONS.height;
-        
-        text.set({
-          left: positionLeft - (text.width || 0) / 2,
-          top: positionTop - (text.height || 0) / 2
-        });
-
+        // Add text to canvas first so Fabric.js can calculate dimensions
         canvas.add(text);
+        
+        // Wait for Fabric.js to calculate dimensions in the next tick
+        setTimeout(() => {
+          // Now get the actual text height after line height has been applied
+          const textHeight = text.calcTextHeight() || text.height || 0;
+          let positionTop;
+          
+          if (textStyle.verticalAlignment === 'top') {
+            positionTop = EXPORT_DIMENSIONS.height * 0.1;
+          } else if (textStyle.verticalAlignment === 'bottom') {
+            positionTop = EXPORT_DIMENSIONS.height * 0.9 - textHeight;
+          } else { // middle/center
+            positionTop = (EXPORT_DIMENSIONS.height - textHeight) / 2;
+          }
+          
+          const positionLeft = (textStyle.position.x / 100) * EXPORT_DIMENSIONS.width;
+          
+          // Update position with correct calculations
+          text.set({
+            left: positionLeft - (text.width || 0) / 2,
+            top: positionTop
+          });
+          
+          // Re-render canvas after positioning
+          canvas.renderAll();
+        }, 0);
+
+        // Text is already added to canvas above
         canvas.renderAll();
 
         // Convert canvas to data URL then to blob URL
@@ -173,18 +193,19 @@ export function BatchImageGenerator() {
       }
 
     });
-  };
+  }, [editorSettings.lineHeight, backgroundPreview]);
   
-  // Function to generate preview images for all pages and backgrounds
+  
+  // Function to generate preview images for all sections and backgrounds
   const generatePreviews = useCallback(async () => {
-    if (!pages || pages.length === 0) return;
+    if (!sections || sections.length === 0) return;
     
     setIsGeneratingPreviews(true);
     const newPreviews: PreviewImage[] = [];
     
     try {
-      for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-        const page = pages[pageIndex];
+      for (let pageIndex = 0; pageIndex < sections.length; pageIndex++) {
+        const section = sections[pageIndex];
         
         for (const background of DEFAULT_BACKGROUNDS) {
           const preview: PreviewImage = {
@@ -198,7 +219,7 @@ export function BatchImageGenerator() {
           setPreviewImages([...newPreviews]);
           
           try {
-            const imageUrl = await generateImageWithBackground(page, background.path, pageIndex + 1);
+            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1);
             preview.imageUrl = imageUrl;
             preview.isLoading = false;
           } catch (error) {
@@ -218,11 +239,11 @@ export function BatchImageGenerator() {
     } finally {
       setIsGeneratingPreviews(false);
     }
-  }, [pages, showError]);
+  }, [sections, showError, generateImageWithBackground, backgroundPreview]);
   
   // Function to generate and download ZIP file
   const handleGenerateAndDownload = async () => {
-    if (!pages || pages.length === 0) {
+    if (!sections || sections.length === 0) {
       showError('No Content', 'Please create some story content first');
       return;
     }
@@ -230,7 +251,7 @@ export function BatchImageGenerator() {
     setIsExporting(true);
     setExportProgress({
       current: 0,
-      total: pages.length * DEFAULT_BACKGROUNDS.length,
+      total: sections.length * DEFAULT_BACKGROUNDS.length,
       stage: 'Initializing...',
       isComplete: false
     });
@@ -247,20 +268,20 @@ export function BatchImageGenerator() {
           throw new Error(`Failed to create folder for ${background.name}`);
         }
         
-        // Generate images for each page with this background
-        for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-          const page = pages[pageIndex];
+        // Generate images for each section with this background
+        for (let pageIndex = 0; pageIndex < sections.length; pageIndex++) {
+          const section = sections[pageIndex];
           
           setExportProgress({
             current: currentProgress,
-            total: pages.length * DEFAULT_BACKGROUNDS.length,
+            total: sections.length * DEFAULT_BACKGROUNDS.length,
             stage: `Generating ${background.name} - Page ${pageIndex + 1}`,
             isComplete: false
           });
           
           try {
             // Generate the image
-            const imageUrl = await generateImageWithBackground(page, background.path, pageIndex + 1);
+            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1);
             
             // Convert blob URL to blob
             const response = await fetch(imageUrl);
@@ -285,7 +306,7 @@ export function BatchImageGenerator() {
       // Generate ZIP file
       setExportProgress({
         current: currentProgress,
-        total: pages.length * DEFAULT_BACKGROUNDS.length,
+        total: sections.length * DEFAULT_BACKGROUNDS.length,
         stage: 'Creating ZIP file...',
         isComplete: false
       });
@@ -308,7 +329,7 @@ export function BatchImageGenerator() {
       
       setExportProgress({
         current: currentProgress,
-        total: pages.length * DEFAULT_BACKGROUNDS.length,
+        total: sections.length * DEFAULT_BACKGROUNDS.length,
         stage: 'Complete!',
         isComplete: true
       });
@@ -345,22 +366,22 @@ export function BatchImageGenerator() {
     URL.revokeObjectURL(downloadUrl);
   };
   
-  // Generate previews when component mounts or pages/alignment change
+  // Generate previews when component mounts or sections/alignment change
   useEffect(() => {
-    if (pages && pages.length > 0) {
+    if (sections && sections.length > 0) {
       generatePreviews();
     }
-  }, [pages, editorSettings.globalTextAlignment, editorSettings.textAlignment, backgroundPreview, generatePreviews]);
+  }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, backgroundPreview, generatePreviews]);
 
   const handleBack = useCallback(() => {
     setCurrentStep(1);
   }, [setCurrentStep]);
 
-  if (!pages || pages.length === 0) {
+  if (!sections || sections.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-8">
-          <p>No pages available. Please go back and create your story content.</p>
+          <p>No content available. Please go back and create your story content.</p>
         </CardContent>
       </Card>
     );
@@ -373,7 +394,7 @@ export function BatchImageGenerator() {
         <CardHeader>
           <CardTitle>Preview & Export</CardTitle>
           <CardDescription>
-            Generate images for all {pages.length} page{pages.length !== 1 ? 's' : ''} with 4 different background styles.
+            Generate images for all {sections.length} page{sections.length !== 1 ? 's' : ''} with 4 different background styles.
             Each page will create 4 different versions (Stage 1-4).
           </CardDescription>
         </CardHeader>
@@ -393,13 +414,13 @@ export function BatchImageGenerator() {
             
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                <p>Total pages: <strong>{pages.length}</strong></p>
-                <p>Total images to generate: <strong>{pages.length * DEFAULT_BACKGROUNDS.length}</strong></p>
+                <p>Total pages: <strong>{sections.length}</strong></p>
+                <p>Total images to generate: <strong>{sections.length * DEFAULT_BACKGROUNDS.length}</strong></p>
               </div>
               <div className="flex items-center space-x-2">
-                {pages.map((page, index) => (
+                {sections.map((section, index) => (
                   <Badge
-                    key={page.id}
+                    key={section.id}
                     variant={selectedPreviewPage === index ? 'default' : 'outline'}
                     className="cursor-pointer transition-all transform ease-in-out hover:scale-105"
                     onClick={() => setSelectedPreviewPage(index)}
@@ -432,12 +453,12 @@ export function BatchImageGenerator() {
             </div>
           ) : (
             <div className="space-y-6">
-              {pages.map((page, pageIndex) => (
-                <div key={page.id} className="space-y-3">
+              {sections.map((section, pageIndex) => (
+                <div key={section.id} className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">Page {pageIndex + 1}</Badge>
                     <span className="text-sm text-gray-600 truncate">
-                      {page.content.substring(0, 100)}...
+                      {section.content.substring(0, 100)}...
                     </span>
                   </div>
                   

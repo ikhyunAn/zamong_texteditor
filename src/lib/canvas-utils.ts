@@ -1,6 +1,7 @@
 import { fabric } from 'fabric';
-import { StorySection, TextStyle, CanvasSettings } from '@/types';
+import { StorySection, TextStyle, CanvasSettings, EditorSettings } from '@/types';
 import { STANDARD_DIMENSIONS } from './constants';
+import { loadAvailableFonts, loadCustomFonts } from './font-utils';
 
 /**
  * Safely render canvas only if canvas is truthy and has a valid context
@@ -14,6 +15,7 @@ export function safeRender(canvas: any): void {
 export interface CanvasTextConfig {
   text: string;
   textStyle: TextStyle;
+  editorSettings?: EditorSettings;
   canvasWidth: number;
   canvasHeight: number;
   globalAlignment?: 'left' | 'center' | 'right';
@@ -174,20 +176,51 @@ export function addTextToCanvas(
   config: CanvasTextConfig
 ): any {
   try {
-    const { text, textStyle, canvasWidth, canvasHeight } = config;
+    const { text, textStyle, editorSettings, canvasWidth, canvasHeight } = config;
     
-    // Calculate position based on percentage
-    const left = (textStyle.position.x / 100) * canvasWidth;
-    const top = (textStyle.position.y / 100) * canvasHeight;
+    // Use editorSettings for fontSize and fontFamily if available, otherwise fall back to textStyle
+    const fontSize = editorSettings?.fontSize || textStyle.fontSize;
+    const fontFamily = editorSettings?.fontFamily || textStyle.fontFamily;
+    const lineHeight = editorSettings?.lineHeight || 1.5;
+    
+    // Get vertical alignment from editorSettings or textStyle
+    const verticalAlignment = editorSettings?.verticalAlignment || textStyle.verticalAlignment || 'middle';
+    
+    // Calculate textbox width (80% of canvas width with some padding)
+    const textboxWidth = canvasWidth * 0.8;
+    
+    // Calculate the total height of the text
+    const textHeight = calculateTextHeight(text, fontSize, lineHeight, textboxWidth);
+    
+    // Calculate vertical position based on alignment
+    let calculatedTop: number;
+    if (verticalAlignment === 'top' || verticalAlignment === 'middle' || verticalAlignment === 'bottom') {
+      // Map 'middle' to 'middle' for the helper function
+      const alignmentForCalculation = verticalAlignment === 'middle' ? 'middle' as const : verticalAlignment;
+      calculatedTop = calculateVerticalPosition(alignmentForCalculation, canvasHeight, textHeight);
+    } else {
+      // Fallback to percentage-based positioning if alignment is not recognized
+      calculatedTop = (textStyle.position.y / 100) * canvasHeight;
+    }
+    
+    // Calculate horizontal position
+    const finalAlignment = config.globalAlignment || textStyle.alignment;
+    let calculatedLeft = (textStyle.position.x / 100) * canvasWidth;
+    
+    // Adjust horizontal position for center alignment
+    if (finalAlignment === 'center') {
+      calculatedLeft = (canvasWidth - textboxWidth) / 2;
+    }
     
     const textbox = new fabric.Textbox(text, {
-      left,
-      top,
-      width: canvasWidth * 0.8, // 80% of canvas width
-      fontSize: textStyle.fontSize,
-      fontFamily: textStyle.fontFamily,
+      left: calculatedLeft,
+      top: calculatedTop,
+      width: textboxWidth,
+      fontSize: fontSize,
+      fontFamily: fontFamily,
+      lineHeight: lineHeight,
       fill: textStyle.color,
-  textAlign: config.globalAlignment || textStyle.alignment,
+      textAlign: finalAlignment,
       backgroundColor: 'rgba(255, 255, 255, 0.1)', // Slight background for readability
       padding: 10,
       selectable: true,
@@ -198,15 +231,6 @@ export function addTextToCanvas(
       borderColor: '#007bff',
       transparentCorners: false
     });
-    
-    // Center the textbox if needed based on global alignment or text style alignment
-    const finalAlignment = config.globalAlignment || textStyle.alignment;
-    if (finalAlignment === 'center') {
-      textbox.set({
-        left: (canvasWidth - textbox.width!) / 2,
-        originX: 'left'
-      });
-    }
     
     canvas.add(textbox);
     canvas.setActiveObject(textbox);
@@ -334,14 +358,16 @@ export function calculateOptimalFontSize(
   maxWidth: number,
   maxHeight: number,
   minFontSize: number = 16,
-  maxFontSize: number = 72
+  maxFontSize: number = 72,
+  lineHeight: number = 1.5
 ): number {
   let fontSize = maxFontSize;
   
   while (fontSize >= minFontSize) {
     const lines = wrapText(text, maxWidth, fontSize);
-    const lineHeight = fontSize * 1.2;
-    const totalHeight = lines.length * lineHeight;
+    // Calculate actual line spacing using fontSize * lineHeight
+    const actualLineSpacing = fontSize * lineHeight;
+    const totalHeight = lines.length * actualLineSpacing;
     
     if (totalHeight <= maxHeight) {
       return fontSize;
@@ -351,4 +377,64 @@ export function calculateOptimalFontSize(
   }
   
   return minFontSize;
+}
+
+/**
+ * Calculate the total height of text based on number of lines and line height
+ */
+export function calculateTextHeight(
+  text: string,
+  fontSize: number,
+  lineHeight: number = 1.5,
+  maxWidth?: number
+): number {
+  if (!text || text.length === 0) return 0;
+  
+  let lines: string[];
+  if (maxWidth) {
+    lines = wrapText(text, maxWidth, fontSize);
+  } else {
+    // Count actual line breaks in the text
+    lines = text.split('\n');
+  }
+  
+  // Calculate actual line spacing
+  const actualLineSpacing = fontSize * lineHeight;
+  return lines.length * actualLineSpacing;
+}
+
+/**
+ * Calculate the starting Y position based on vertical alignment
+ */
+export function calculateVerticalPosition(
+  verticalAlignment: 'top' | 'middle' | 'bottom',
+  canvasHeight: number,
+  textHeight: number,
+  padding: number = 20
+): number {
+  switch (verticalAlignment) {
+    case 'top':
+      return padding;
+    case 'middle':
+      return (canvasHeight - textHeight) / 2;
+    case 'bottom':
+      return canvasHeight - textHeight - padding;
+    default:
+      return (canvasHeight - textHeight) / 2; // Default to middle
+  }
+}
+
+/**
+ * Ensure fonts are loaded before canvas operations
+ */
+export async function ensureFontsLoaded(): Promise<void> {
+  try {
+    await Promise.allSettled([
+      loadAvailableFonts(),
+      loadCustomFonts()
+    ]);
+  } catch (error) {
+    console.warn('Font loading failed:', error);
+    // Don't throw - continue with fallback fonts
+  }
 }

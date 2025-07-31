@@ -22,7 +22,8 @@ async function generateImageWithBackground(
   textStyle: TextStyle,
   pageNumber: number,
   globalAlignment?: 'left' | 'center' | 'right',
-  title?: string
+  title?: string,
+  editorSettings?: { fontSize: number; fontFamily: string; lineHeight: number }
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const canvas = new fabric.Canvas(null, {
@@ -58,16 +59,19 @@ async function generateImageWithBackground(
 
       // Add story title to the first image
       if (pageNumber === 1 && title) {
+        const titleFontSize = Math.max((editorSettings?.fontSize || textStyle.fontSize) + 6, 28);
+        const titleLineHeight = editorSettings?.lineHeight || 1.2;
+        
         const titleText = new fabric.Textbox(title, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.03,
           width: EXPORT_DIMENSIONS.width * 0.8,
-          fontSize: Math.max(textStyle.fontSize + 6, 28), // Ensure minimum readable size
-          fontFamily: textStyle.fontFamily,
+          fontSize: titleFontSize,
+          fontFamily: editorSettings?.fontFamily || textStyle.fontFamily,
           fontWeight: 'bold',
           fill: textStyle.color,
           textAlign: 'center', // Always center the title for better presentation
-          lineHeight: 1.2,
+          lineHeight: titleLineHeight,
           selectable: false,
           evented: false
         });
@@ -82,11 +86,11 @@ async function generateImageWithBackground(
         left: EXPORT_DIMENSIONS.width * 0.1,
         top: contentTopPosition,
         width: EXPORT_DIMENSIONS.width * 0.8,
-        fontSize: textStyle.fontSize,
-        fontFamily: textStyle.fontFamily,
+        fontSize: editorSettings?.fontSize || textStyle.fontSize,
+        fontFamily: editorSettings?.fontFamily || textStyle.fontFamily,
         fill: textStyle.color,
         textAlign: globalAlignment || textStyle.alignment,
-        lineHeight: 1.5,
+        lineHeight: editorSettings?.lineHeight || 1.5,
         splitByGrapheme: true,
         selectable: false,
         evented: false
@@ -134,7 +138,8 @@ export async function generateAllVersions(
   textStyle: TextStyle,
   globalAlignment?: 'left' | 'center' | 'right',
   verticalAlignment?: 'top' | 'middle' | 'bottom',
-  onProgress?: (progress: ExportProgress) => void
+  onProgress?: (progress: ExportProgress) => void,
+  editorSettings?: { fontSize: number; fontFamily: string; lineHeight: number }
 ): Promise<Blob> {
   const zip = new JSZip();
   const folderName = `${authorInfo.name.replace(/\s+/g, '_')}_${authorInfo.title.replace(/\s+/g, '_')}`;
@@ -162,6 +167,7 @@ export async function generateAllVersions(
         id: `${background.id}-page-${i}`,
         sectionContent: page.content,
         textStyle,
+        editorSettings,
         backgroundImage: background.path,
         dimensions: EXPORT_DIMENSIONS,
         pageNumber: i + 1,
@@ -229,7 +235,8 @@ export async function generateAllVersions(
             textStyle,
             i + 1,
             globalAlignment,
-            i === 0 ? authorInfo.title : undefined // Only add title to first page
+            i === 0 ? authorInfo.title : undefined, // Only add title to first page
+            editorSettings
           );
 
           // Add to zip with proper naming
@@ -284,8 +291,9 @@ export async function previewPageWithBackground(
   textStyle: TextStyle,
   globalAlignment?: 'left' | 'center' | 'right',
   title?: string,
-  pageNumber: number = 1
+  pageNumber: number = 1,
+  editorSettings?: { fontSize: number; fontFamily: string; lineHeight: number }
 ): Promise<string> {
-  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, pageNumber, globalAlignment, title);
+  const blob = await generateImageWithBackground(page, backgroundPath, textStyle, pageNumber, globalAlignment, title, editorSettings);
   return URL.createObjectURL(blob);
 }

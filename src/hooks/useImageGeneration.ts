@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { fabric } from 'fabric';
-import { StorySection } from '@/types';
+import { StorySection, EditorSettings } from '@/types';
 import { 
   createCanvas, 
   addBackgroundImage, 
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { STANDARD_DIMENSIONS } from '@/lib/constants';
 
 interface UseImageGenerationReturn {
-  generateImage: (section: StorySection, format: 'square' | 'portrait') => Promise<HTMLCanvasElement>;
+  generateImage: (section: StorySection, format: 'square' | 'portrait', editorSettings?: EditorSettings) => Promise<HTMLCanvasElement>;
   isGenerating: boolean;
   error: string | null;
 }
@@ -25,7 +25,8 @@ export function useImageGeneration(): UseImageGenerationReturn {
 
   const generateImage = useCallback(async (
     section: StorySection, 
-    format: 'square' | 'portrait' = 'square'
+    format: 'square' | 'portrait' = 'square',
+    editorSettings?: EditorSettings
   ): Promise<HTMLCanvasElement> => {
     setIsGenerating(true);
     setError(null);
@@ -47,6 +48,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       const textConfig: CanvasTextConfig = {
         text: section.content,
         textStyle: section.textStyle,
+        editorSettings: editorSettings,
         canvasWidth: dimensions.width,
         canvasHeight: dimensions.height
       };
@@ -78,7 +80,9 @@ export function useImageGeneration(): UseImageGenerationReturn {
         context.fillStyle = '#F0F0F0';
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.fillStyle = '#888';
-        context.font = '20px Arial';
+        const fallbackFontSize = editorSettings?.fontSize || 20;
+        const fallbackFontFamily = editorSettings?.fontFamily || 'Arial';
+        context.font = `${fallbackFontSize}px ${fallbackFontFamily}`;
         context.textAlign = 'center';
         context.fillText('Preview unavailable', canvas.width / 2, canvas.height / 2);
       }

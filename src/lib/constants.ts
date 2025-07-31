@@ -11,7 +11,8 @@ export const DEFAULT_TEXT_STYLE = {
   fontSize: 36,
   color: '#000000',
   position: { x: 50, y: 50 },
-  alignment: 'center' as const
+  alignment: 'center' as const,
+  verticalAlignment: 'middle' as const
 };
 
 // Default background image path for text editor preview
