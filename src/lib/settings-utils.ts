@@ -183,7 +183,7 @@ export function hasSettingsChanged(currentSettings: EditorSettings): boolean {
  * @param existingSettings Settings from existing project
  * @returns Object containing migrated settings and migration info
  */
-export function migrateProjectSettings(existingSettings: any): {
+export function migrateProjectSettings(existingSettings: Partial<EditorSettings> | Record<string, unknown>): {
   settings: EditorSettings;
   wasMigrated: boolean;
   migrationLog: string[];
@@ -207,29 +207,31 @@ export function migrateProjectSettings(existingSettings: any): {
   if (originalJson !== migratedJson) {
     wasMigrated = true;
     
-    // Log specific migrations
-    if (!existingSettings.globalTextAlignment) {
+        // Log specific migrations
+    if (!('globalTextAlignment' in existingSettings)) {
       migrationLog.push('Added globalTextAlignment field for backward compatibility');
     }
     
-    if (existingSettings.fontSize && (existingSettings.fontSize < 8 || existingSettings.fontSize > 72)) {
+    if ('fontSize' in existingSettings && typeof existingSettings.fontSize === 'number' && 
+        (existingSettings.fontSize < 8 || existingSettings.fontSize > 72)) {
       migrationLog.push(`Font size ${existingSettings.fontSize} was out of range, normalized to ${migratedSettings.fontSize}`);
     }
     
-    if (existingSettings.lineHeight && (existingSettings.lineHeight < 1.0 || existingSettings.lineHeight > 3.0)) {
+    if ('lineHeight' in existingSettings && typeof existingSettings.lineHeight === 'number' && 
+        (existingSettings.lineHeight < 1.0 || existingSettings.lineHeight > 3.0)) {
       migrationLog.push(`Line height ${existingSettings.lineHeight} was out of range, normalized to ${migratedSettings.lineHeight}`);
     }
     
-    if (!existingSettings.fontFamily) {
+    if (!('fontFamily' in existingSettings)) {
       migrationLog.push('Missing font family, set to default CustomFontTTF');
     }
     
-    if (!existingSettings.textAlignment) {
+    if (!('textAlignment' in existingSettings)) {
       migrationLog.push('Missing text alignment, set to default left');
     }
     
-    if (!existingSettings.verticalAlignment) {
-      migrationLog.push('Missing vertical alignment, set to default top');
+    if (!('verticalAlignment' in existingSettings)) {
+      migrationLog.push('Missing vertical alignment, set to default middle');
     }
   }
 

@@ -10,10 +10,10 @@ export const usePageManager = () => {
     sections,
     pages,
     currentPageIndex,
-    editorSettings,
-    setCurrentStep,
+    // editorSettings, // unused but kept for potential future use
+    // setCurrentStep, // unused but kept for potential future use
     setPages,
-    setCurrentPageIndex,
+    // setCurrentPageIndex, // unused but available from store
     addEmptyPage,
     updatePage,
     getCurrentPageContent,
@@ -90,12 +90,12 @@ export const usePageManager = () => {
     return newPages.slice(0, 6); // Ensure we never exceed 6 pages
   }, [calculateLineCount]);
 
-  // Navigate to a specific page
-  const navigateToPage = useCallback((pageIndex: number) => {
-    if (pageIndex >= 0 && pageIndex < pages.length) {
-      setCurrentPageIndex(pageIndex);
-    }
-  }, [pages.length, setCurrentPageIndex]);
+  // Navigate to a specific page (simple version - unused, kept for potential future use)
+  // const navigateToPage = useCallback((pageIndex: number) => {
+  //   if (pageIndex >= 0 && pageIndex < pages.length) {
+  //     setCurrentPageIndex(pageIndex);
+  //   }
+  // }, [pages.length, setCurrentPageIndex]);
 
   // Check if content exceeds page limits
   const checkPageLimits = useCallback(() => {

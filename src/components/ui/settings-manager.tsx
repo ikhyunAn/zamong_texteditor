@@ -93,8 +93,8 @@ export function SettingsManager({
     const result = await checkAndMigrate(legacySettings);
     if (result) {
       setMigrationStatus({
-        wasMigrated: result.wasMigrated || false,
-        migrationLog: result.wasMigrated ? ['Settings migrated successfully'] : ['No migration needed']
+        wasMigrated: result.success || false,
+        migrationLog: result.success ? ['Settings migrated successfully'] : [result.error || 'Migration failed']
       });
     }
   };

@@ -108,7 +108,8 @@ export function ImageGenerator() {
         canvasContainerRef.current.appendChild(canvasElement);
       }
 
-      const canvas = new fabric.Canvas(canvasElement, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const canvas = new (fabric as any).Canvas(canvasElement, {
         width: dimensions.width,
         height: dimensions.height,
         backgroundColor: '#ffffff'

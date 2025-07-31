@@ -89,7 +89,8 @@ export function BatchImageGenerator() {
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvasElement = document.createElement('canvas');
-      const canvas = new fabric.Canvas(canvasElement, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const canvas = new (fabric as any).Canvas(canvasElement, {
         width: EXPORT_DIMENSIONS.width,
         height: EXPORT_DIMENSIONS.height,
         backgroundColor: '#ffffff'
@@ -112,7 +113,8 @@ export function BatchImageGenerator() {
         
         // Add title on the first page
         if (isFirstPage && authorInfo.title) {
-          const titleText = new fabric.Text(authorInfo.title, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const titleText = new (fabric as any).Text(authorInfo.title, {
             left: contentLeft,
             top: topOffset,
             width: contentWidth,
@@ -148,7 +150,8 @@ export function BatchImageGenerator() {
           textContent = textContent.replace(/\n{2,}/g, '\n');
         }
         
-        const text = new fabric.Textbox(textContent, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const text = new (fabric as any).Textbox(textContent, {
           left: contentLeft,
           top: topOffset,
           width: contentWidth,
@@ -168,7 +171,8 @@ export function BatchImageGenerator() {
         // Add writer's name for stage 4, last page only
         const isLastPage = pageNumber === sections.length;
         if (isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
-          const writerName = new fabric.Text(authorInfo.name, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const writerName = new (fabric as any).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
             fontSize: 40,
@@ -215,7 +219,8 @@ export function BatchImageGenerator() {
           // Adjust text position
           if (isFirstPage && authorInfo.title && verticalAlign !== 'top') {
             // Reposition both title and text when not top-aligned
-            const titleElements = canvas.getObjects().filter(obj => obj.type === 'text');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const titleElements = canvas.getObjects().filter((obj: any) => obj.type === 'text');
             if (titleElements.length > 0) {
               titleElements[0].set({ top: finalTopPosition });
               text.set({ top: finalTopPosition + 60 * 1.5 + 20 });
@@ -257,6 +262,7 @@ export function BatchImageGenerator() {
       // Only load background image if backgroundPreview is enabled
       if (backgroundPreview) {
         // Load background image
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fabric.Image.fromURL(backgroundPath, (img: any) => {
           if (!img) {
             reject(new Error('Failed to load background image'));

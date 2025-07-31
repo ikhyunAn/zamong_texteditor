@@ -143,7 +143,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 
   useEffect(() => {
     if (editor) {
-      const handleUpdate = ({ editor }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handleUpdate = ({ editor }: { editor: any }) => {
         const newHtmlContent = editor.getHTML();
         debouncedUpdateContent(newHtmlContent);
         updateTextAlignment();
@@ -185,6 +186,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [currentPageIndex, editor, getCurrentPageContent]);
   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const validateContentIntegrity = useCallback((pageIndex: number, currentContent: string): boolean => {
     if (pageIndex === 0 && firstPageSnapshotRef.current) {
       // Use a more lenient comparison that focuses on meaningful content
@@ -214,6 +216,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     return true;
   }, [pages]);
   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const restoreFromSnapshot = useCallback((pageIndex: number): string | null => {
     if (pageIndex === 0) {
       // Try primary snapshot first

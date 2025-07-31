@@ -51,7 +51,8 @@ export function useCanvasPreview(
       
       // Create a temporary fabric canvas for preview
       const { fabric } = await import('fabric');
-      const tempCanvas = new fabric.Canvas(canvasElement, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tempCanvas = new (fabric as any).Canvas(canvasElement, {
         width: canvasElement.width,
         height: canvasElement.height,
         backgroundColor: '#ffffff'

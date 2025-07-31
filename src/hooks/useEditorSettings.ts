@@ -15,18 +15,19 @@ export function useEditorSettings() {
   const {
     editorSettings,
     updateEditorSettings,
-    loadPersistedSettings,
-    saveCurrentSettings,
-    validateAndMigrateSettings,
-    resetSettingsToDefaults
+    // loadPersistedSettings, // Not available in current store
+    // saveCurrentSettings, // Not available in current store
+    // validateAndMigrateSettings, // Not available in current store
+    // resetSettingsToDefaults // Not available in current store
   } = useStoryStore();
 
   // Load persisted settings on mount (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      loadPersistedSettings();
+      // Settings loading would be implemented here if store had the method
+      console.log('Settings loading not implemented in store');
     }
-  }, [loadPersistedSettings]);
+  }, []);
 
   // Export settings as JSON string
   const exportSettings = useCallback(() => {
@@ -52,13 +53,15 @@ export function useEditorSettings() {
 
   // Save current settings manually
   const saveSettings = useCallback(() => {
-    saveCurrentSettings();
-  }, [saveCurrentSettings]);
+    // Settings saving would be implemented here if store had the method
+    console.log('Settings saving not implemented in store');
+  }, []);
 
   // Reset to default settings
   const resetToDefaults = useCallback(() => {
-    resetSettingsToDefaults();
-  }, [resetSettingsToDefaults]);
+    // Reset to defaults would be implemented here if store had the method
+    console.log('Reset to defaults not implemented in store');
+  }, []);
 
   // Clear all stored settings
   const clearStoredSettings = useCallback(() => {
@@ -68,8 +71,10 @@ export function useEditorSettings() {
 
   // Migrate legacy settings
   const migrateSettings = useCallback((legacySettings: unknown) => {
-    return validateAndMigrateSettings(legacySettings);
-  }, [validateAndMigrateSettings]);
+    // Migration would be implemented here if store had the method
+    console.log('Settings migration not implemented in store', legacySettings);
+    return { success: false, error: 'Migration not implemented' };
+  }, []);
 
   // Download settings as JSON file
   const downloadSettings = useCallback(() => {
@@ -133,7 +138,7 @@ export function useEditorSettings() {
     
     // Persistence functions
     saveSettings,
-    loadSettings: loadPersistedSettings,
+    loadSettings: () => console.log('Load settings not implemented'),
     resetToDefaults,
     clearStoredSettings,
     
@@ -155,7 +160,7 @@ export function useEditorSettings() {
  * Hook for components that need to check for settings migration on mount
  */
 export function useSettingsMigration() {
-  const { validateAndMigrateSettings } = useStoryStore();
+  // Note: validateAndMigrateSettings not available in current store implementation
 
   const checkAndMigrate = useCallback(async (existingSettings?: unknown) => {
     if (!existingSettings) {
@@ -163,11 +168,11 @@ export function useSettingsMigration() {
     }
 
     try {
-      const migratedSettings = validateAndMigrateSettings(existingSettings);
+      // Migration would be implemented here if store had the method
+      console.log('Settings migration not implemented in store', existingSettings);
       return {
-        success: true,
-        settings: migratedSettings,
-        wasMigrated: JSON.stringify(existingSettings) !== JSON.stringify(migratedSettings)
+        success: false,
+        error: 'Migration not implemented in current store'
       };
     } catch (error) {
       console.error('Settings migration failed:', error);
@@ -176,7 +181,7 @@ export function useSettingsMigration() {
         error: error instanceof Error ? error.message : 'Migration failed'
       };
     }
-  }, [validateAndMigrateSettings]);
+  }, []);
 
   return { checkAndMigrate };
 }

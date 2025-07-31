@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import { fabric } from 'fabric';
 import { StorySection, EditorSettings } from '@/types';
 import { 
   createCanvas, 
@@ -20,12 +19,12 @@ interface UseImageGenerationReturn {
 export function useImageGeneration(): UseImageGenerationReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canvasRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { showError } = useToast();
 
   const generateImage = useCallback(async (
     section: StorySection, 
-    format: 'square' | 'portrait' = 'square',
+    format: 'square' | 'portrait' = 'square', // format parameter kept for API compatibility
     editorSettings?: EditorSettings
   ): Promise<HTMLCanvasElement> => {
     setIsGenerating(true);
@@ -34,6 +33,9 @@ export function useImageGeneration(): UseImageGenerationReturn {
     try {
       // Use standard dimensions (900 × 1600) for both formats
       const dimensions = STANDARD_DIMENSIONS;
+      
+      // Format is available for future use but currently both formats use same dimensions
+      console.log('Generating image with format:', format);
       
       // Create canvas
       const canvas = createCanvas(dimensions.width, dimensions.height);

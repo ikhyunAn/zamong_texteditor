@@ -3,7 +3,6 @@ import JSZip from 'jszip';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
 import { 
-  exportCanvasAsImage, 
   generateImageFilename, 
   generateZipFilename 
 } from '@/lib/canvas-utils';

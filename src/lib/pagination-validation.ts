@@ -251,6 +251,12 @@ export const validateNavigation = (current: number, target: number, total: numbe
   paginationValidator.validateNavigation(current, target, total);
 export const logNavigation = (action: string, from: number, to: number, success: boolean, error?: string) =>
   paginationValidator.logNavigation(action, from, to, success, error);
-export const logPageState = (label: string, state: any) => paginationValidator.logPageState(label, state);
-export const detectAnomalies = (pages: Page[], currentIndex: number) => 
+export const logPageState = (label: string, state: {
+  currentPageIndex: number;
+  totalPages: number;
+  pages: Page[];
+  currentPageContent?: string;
+}) => paginationValidator.logPageState(label, state);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const detectAnomalies = (pages: Page[], _currentIndex: number) => 
   paginationValidator.detectAnomalies(pages);

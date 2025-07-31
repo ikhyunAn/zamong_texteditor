@@ -15,6 +15,13 @@ interface ExportProgress {
   stage: string;
 }
 
+interface WorkerResult {
+  id: string;
+  dataUrl: string;
+  pageNumber: number;
+  error?: string;
+}
+
 // Generate a single image with background
 async function generateImageWithBackground(
   page: Page,
@@ -26,15 +33,16 @@ async function generateImageWithBackground(
   editorSettings?: { fontSize: number; fontFamily: string; lineHeight: number }
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const canvas = new fabric.Canvas(null, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const canvas = new (fabric as any).Canvas(null, {
       width: EXPORT_DIMENSIONS.width,
       height: EXPORT_DIMENSIONS.height,
       backgroundColor: '#ffffff'
     });
 
     // Load background image
-    // @ts-expect-error - Fabric types issue
-    fabric.Image.fromURL(backgroundPath, (img) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fabric.Image.fromURL(backgroundPath, (img: any) => {
       if (!img) {
         reject(new Error('Failed to load background image'));
         return;
@@ -62,7 +70,8 @@ async function generateImageWithBackground(
         const titleFontSize = Math.max((editorSettings?.fontSize || textStyle.fontSize) + 6, 28);
         const titleLineHeight = editorSettings?.lineHeight || 1.2;
         
-        const titleText = new fabric.Textbox(title, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const titleText = new (fabric as any).Textbox(title, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.03,
           width: EXPORT_DIMENSIONS.width * 0.8,
@@ -82,7 +91,8 @@ async function generateImageWithBackground(
       // Add text content - adjust top position if title is present
       const contentTopPosition = (pageNumber === 1 && title) ? EXPORT_DIMENSIONS.height * 0.15 : EXPORT_DIMENSIONS.height * 0.1;
 
-      const text = new fabric.Textbox(page.content, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = new (fabric as any).Textbox(page.content, {
         left: EXPORT_DIMENSIONS.width * 0.1,
         top: contentTopPosition,
         width: EXPORT_DIMENSIONS.width * 0.8,
@@ -175,9 +185,9 @@ export async function generateAllVersions(
         title: i === 0 ? authorInfo.title : undefined // Only add title to first page
       }));
       
-      const results = await new Promise<any[]>((resolve, reject) => {
+      const results = await new Promise<WorkerResult[]>((resolve, reject) => {
         worker.onmessage = (event) => {
-          const { type, results, progress, total } = event.data;
+          const { type, results, progress } = event.data;
           
           if (type === 'PROGRESS') {
             currentImage = progress + (DEFAULT_BACKGROUNDS.indexOf(background) * pages.length);
