@@ -75,17 +75,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[1].family); // Default to CustomFontTTF
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
-  
-  // Refs to track navigation state and prevent content overwrites
-  const isNavigatingRef = useRef(false);
-  const lastSyncedContentRef = useRef('');
-  const lastSyncedPageIndexRef = useRef(0);
-  
-  // Content Integrity Snapshot System
+
+  // Refs for content integrity
   const firstPageSnapshotRef = useRef<string>('');
-  const firstPageBackupSnapshotRef = useRef<string>(''); // Additional backup for first page
+  const firstPageBackupSnapshotRef = useRef<string>('');
   const lastKnownGoodContentRef = useRef<{ [pageId: string]: string }>({});
-  const isReturningFromPreviewRef = useRef(false);
+  const isNavigatingRef = useRef(false);
   const firstPageInitializedRef = useRef(false);
   
   // Get page info - make it reactive to currentPageIndex changes
@@ -137,37 +132,31 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     [editor, editorSettings.textAlignment]
   );
 
-  // Debounced editor content update to prevent excessive store updates
   const debouncedUpdateContent = useMemo(
     () => debounce((htmlContent: string) => {
-      // Only update if we're not currently navigating and content actually changed
-      if (!isNavigatingRef.current) {
-        // Extract text from HTML to preserve newlines
-        const textContent = htmlToTextWithLineBreaks(htmlContent);
-        const currentStoreContent = getCurrentPageContent();
-        if (textContent !== currentStoreContent) {
-          console.log('[Editor] Updating store content:', textContent.length, 'characters, newlines:', textContent.split('\n').length - 1);
-          updateCurrentPageContent(textContent);
-        }
+      const textContent = htmlToTextWithLineBreaks(htmlContent);
+      if (textContent !== getCurrentPageContent()) {
+        console.log('[Editor] Updating store content:', textContent.length, 'characters, newlines:', textContent.split('\n').length - 1);
+        updateCurrentPageContent(textContent);
       }
     }, 300),
     [getCurrentPageContent, updateCurrentPageContent]
   );
 
-  // Add onUpdate to editor with improved synchronization
   useEffect(() => {
     if (editor) {
+      const handleUpdate = ({ editor }) => {
+        const newHtmlContent = editor.getHTML();
+        debouncedUpdateContent(newHtmlContent);
+        updateTextAlignment();
+      };
+
       editor.setOptions({
-        onUpdate: ({ editor }) => {
-          const newHtmlContent = editor.getHTML();
-          // Use debounced update with HTML content to preserve newlines
-          debouncedUpdateContent(newHtmlContent);
-          // Update text alignment immediately (UI change)
-          updateTextAlignment();
-        },
+        onUpdate: handleUpdate,
       });
     }
   }, [editor, debouncedUpdateContent, updateTextAlignment]);
+
 
   // Enhanced Content Integrity Snapshot Utilities
   const storeSnapshot = useCallback((pageIndex: number, content: string) => {
@@ -264,17 +253,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   useEffect(() => {
     const handleReturnFromPreview = () => {
       console.log('[Preview] Detected return from preview mode');
-      isReturningFromPreviewRef.current = true;
-      
-      // Reset flag after a delay
-      setTimeout(() => {
-        isReturningFromPreviewRef.current = false;
-      }, 5000);
+      // No longer need to manually manage flags
     };
     
     window.addEventListener('returnFromPreview', handleReturnFromPreview);
     return () => window.removeEventListener('returnFromPreview', handleReturnFromPreview);
-  }, []);
+  }, [currentPageIndex, getCurrentPageContent]);
 
   // Enhanced navigation wrapper with proper synchronization
   const navigateToPageWithEditorSync = useCallback((pageIndex: number) => {
@@ -361,15 +345,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     addNewPage();
   }, [editor, syncContentToPage, addNewPage]);
 
-  // Manual synchronization handler
   const handleManualSync = useCallback(() => {
     console.log('[Sync] Manual synchronization triggered');
     if (editor) {
       const currentEditorHtml = editor.getHTML();
       const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
-      console.log('[Sync] Syncing current editor content:', currentEditorContent.length, 'characters, newlines:', currentEditorContent.split('\n').length - 1);
       syncContentToPage(currentEditorContent);
-      // Provide user feedback
       setPageBreakMessage('Content synchronized successfully!');
       setTimeout(() => setPageBreakMessage(''), 2000);
     } else {
@@ -475,9 +456,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     setTimeout(() => setPageBreakMessage(''), 2000);
     
     // Update current page with content before cursor
-    if (beforeContent.trim()) {
+    if (beforeContent) {
       const beforeHtml = textToHtmlWithLineBreaks(beforeContent);
-      updateCurrentPageContent(beforeContent.trim());
+      updateCurrentPageContent(beforeContent); // Don't trim to preserve whitespace
       // Set editor content with preserved formatting
       editor.commands.setContent(beforeHtml);
     } else {
@@ -493,9 +474,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       
       // Set content on the new page after a brief delay to ensure page is created
       setTimeout(() => {
-        if (afterContent.trim()) {
+        if (afterContent) {
           const afterHtml = textToHtmlWithLineBreaks(afterContent);
-          updateCurrentPageContent(afterContent.trim());
+          updateCurrentPageContent(afterContent); // Don't trim to preserve whitespace
           if (editor && !editor.isDestroyed) {
             editor.commands.setContent(afterHtml);
             // Focus the editor on the new page
@@ -576,135 +557,21 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, insertPageBreak, addNewPageWithSync, pages.length]);
 
-  // Enhanced content synchronization with improved race condition prevention
   useEffect(() => {
-    // Early return if editor is not ready or no pages exist
     if (!editor || pages.length === 0) {
       return;
     }
-    
-    // Skip sync during navigation to prevent content overwrites
-    if (isNavigatingRef.current) {
-      console.log('[Sync] Skipping sync during navigation');
-      return;
-    }
-    
-    const currentPageContent = getCurrentPageContent() || '';
-    const currentEditorContent = editor.getText();
-    
-    // Determine if sync is actually needed based on multiple conditions:
-    const pageIndexChanged = lastSyncedPageIndexRef.current !== currentPageIndex;
-    const contentChanged = lastSyncedContentRef.current !== currentPageContent;
-    const editorContentDiffers = currentPageContent !== currentEditorContent;
-    
-    // Enhanced debugging to understand sync behavior
-    console.log('[Sync Debug]', {
-      currentPageIndex,
-      pageIndexChanged,
-      contentChanged,
-      editorContentDiffers,
-      currentPageContent: currentPageContent.substring(0, 50) + '...',
-      currentEditorContent: currentEditorContent.substring(0, 50) + '...',
-      lastSyncedPageIndex: lastSyncedPageIndexRef.current,
-      lastSyncedContent: lastSyncedContentRef.current.substring(0, 50) + '...',
-      editorIsFocused: editor.isFocused,
-      isNavigating: isNavigatingRef.current
-    });
-    
-    // More conservative sync conditions:
-    // 1. Page index has changed (navigation occurred) - this is the primary trigger
-    // 2. Content has changed externally AND editor is not focused (external update)
-    // 3. Never sync when editor is focused to prevent overwriting user input
-    const shouldSync = pageIndexChanged && !editor.isFocused && !isNavigatingRef.current;
-    
-    if (shouldSync) {
-      console.log('[Sync] Syncing content for page', currentPageIndex, 'with content:', currentPageContent.substring(0, 50));
-      
-      // Update tracking refs before sync to prevent unnecessary future syncs
-      lastSyncedPageIndexRef.current = currentPageIndex;
-      lastSyncedContentRef.current = currentPageContent;
-      
-      // Use requestAnimationFrame for better timing coordination with a timeout fallback
-      const timeoutId = setTimeout(() => {
-        if (editor && !editor.isDestroyed && !isNavigatingRef.current && !editor.isFocused) {
-          console.log('[Sync] Executing content sync for page', currentPageIndex);
-          
-          // Content Integrity Validation and Restoration
-          let contentToSync = currentPageContent;
-          
-          // Special handling for first page content integrity
-          if (currentPageIndex === 0) {
-            // Get the current editor HTML and extract text properly
-            const editorHtmlContent = editor.getHTML();
-            const editorTextFromHtml = htmlToTextWithLineBreaks(editorHtmlContent);
-            
-            console.log('[Sync Debug HTML]', {
-              editorHtml: editorHtmlContent.substring(0, 100),
-              editorTextFromHtml: editorTextFromHtml.substring(0, 100),
-              editorGetText: editor.getText().substring(0, 100),
-              storeContent: currentPageContent.substring(0, 100)
-            });
-            
-            // Check if current content has lost newlines
-            const hasNewlines = currentPageContent.includes('\n');
-            const shouldHaveNewlines = firstPageSnapshotRef.current.includes('\n') || firstPageBackupSnapshotRef.current.includes('\n');
-            
-            // If editor HTML contains proper line breaks but store content doesn't, restore from snapshot
-            if (shouldHaveNewlines && !hasNewlines && isReturningFromPreviewRef.current) {
-              console.log('[Sync] First page content integrity issue detected - restoring from snapshot');
-              const restoredContent = restoreFromSnapshot(currentPageIndex);
-              if (restoredContent) {
-                contentToSync = restoredContent;
-                // Force update the store with restored content
-                setCurrentPageContent(restoredContent);
-                console.log('[Sync] Restored content with', restoredContent.split('\n').length - 1, 'newlines');
-              }
-            } else if (hasNewlines && (isReturningFromPreviewRef.current || !firstPageInitializedRef.current)) {
-              // Store good content as snapshot if we don't have one or if returning from preview
-              if (!firstPageSnapshotRef.current.includes('\n')) {
-                firstPageSnapshotRef.current = currentPageContent;
-                firstPageBackupSnapshotRef.current = currentPageContent;
-                console.log('[Sync] Updated first page snapshot with good content');
-              }
-            }
-          }
-          
-          // Prevent the editor from triggering updates during sync
-          const originalOnUpdate = editor.options.onUpdate;
-          editor.setOptions({ onUpdate: undefined });
-          
-          try {
-            // Clear content first to ensure clean state
-            editor.commands.clearContent();
-            // Convert plain text to HTML with proper line break preservation
-            const htmlContent = contentToSync ? 
-              textToHtmlWithLineBreaks(contentToSync) : '<p></p>';
-            editor.commands.setContent(htmlContent);
-            
-            // Focus the editor after content is set for page navigation
-            if (pageIndexChanged) {
-              setTimeout(() => {
-                if (editor && !editor.isDestroyed && !isNavigatingRef.current) {
-                  editor.commands.focus('start');
-                }
-              }, 50);
-            }
-          } finally {
-            // Restore the original onUpdate handler
-            setTimeout(() => {
-              if (editor && !editor.isDestroyed) {
-                editor.setOptions({ onUpdate: originalOnUpdate });
-              }
-            }, 100);
-          }
-        }
-      }, 16); // Use ~1 frame delay for better timing
-      
-      // Cleanup timeout if component unmounts
-      return () => clearTimeout(timeoutId);
-    }
-  }, [editor, currentPageIndex, getCurrentPageContent, pages.length]);
 
+    const currentPageContent = getCurrentPageContent() || '';
+    const editorContent = htmlToTextWithLineBreaks(editor.getHTML());
+
+    if (currentPageContent !== editorContent) {
+      const htmlContent = currentPageContent ?
+        textToHtmlWithLineBreaks(currentPageContent) :
+        '<p></p>';
+      editor.commands.setContent(htmlContent, false, { preserveWhitespace: 'full' });
+    }
+  }, [editor, currentPageIndex, getCurrentPageContent, pages]);
   // Handle font change
   const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const fontFamily = e.target.value;
@@ -1050,7 +917,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                     line-height: ${editorSettings.lineHeight};
                   }
                   .ProseMirror p + p {
-                    margin-top: ${editorSettings.fontSize * 0.5}px;
+                    margin-top: 0;
+                  }
+                  .ProseMirror br {
+                    display: block;
+                    content: "";
+                    margin-top: 0;
                   }
                 `}</style>
                 <div className="relative z-10">

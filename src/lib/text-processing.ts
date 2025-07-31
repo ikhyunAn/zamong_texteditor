@@ -260,24 +260,20 @@ export function splitContentPreservingLineBreaks(content: string, position: numb
  * Enhanced to preserve all line breaks including consecutive ones
  */
 export function textToHtmlWithLineBreaks(text: string): string {
-  if (!text.trim()) return '<p></p>';
+  if (!text) return '<p></p>';
   
-  // Split by double newlines to identify paragraphs
-  const paragraphs = text.split(/\n\n+/);
+  // Split by double newlines to create paragraphs
+  const paragraphs = text.split(/\n\n/);
   
   return paragraphs
     .map(paragraph => {
-      if (!paragraph.trim()) return ' 3cp 3e 3cbr 3e 3c/p 3e';
-      
       // Within each paragraph, convert single newlines to <br> tags
-      // Preserve empty lines by not trimming and not filtering them out
+      if (!paragraph) return '<p><br></p>';
+      
+      // Replace single newlines with <br> tags
       const withBreaks = paragraph
         .split('\n')
-        .map(line => {
-          // Don't trim lines to preserve leading/trailing spaces
-          // Replace empty lines with a single space to preserve structure
-          return line === '' ? ' ' : line;
-        })
+        .map(line => line || '')
         .join('<br>');
       
       return `<p>${withBreaks}</p>`;
@@ -290,23 +286,48 @@ export function textToHtmlWithLineBreaks(text: string): string {
  * Enhanced to better preserve whitespace and line structure
  */
 export function htmlToTextWithLineBreaks(html: string): string {
-  return html
-    .replace(/<\/p>\s*<p>/gi, '\n\n') // Convert paragraph breaks to double newlines
-    .replace(/<br\s*\/?>/gi, '\n') // Convert <br> tags to single newlines
-    .replace(/<p>/gi, '') // Remove opening paragraph tags
-    .replace(/<\/p>/gi, '\n') // Convert closing paragraph tags to newlines
-    .replace(/<[^>]*>/g, '') // Remove remaining HTML tags
-    .replace(/&nbsp;/g, ' ') // Convert non-breaking spaces
+  // Handle empty or null input
+  if (!html) return '';
+  
+  // Process HTML more carefully to avoid adding extra newlines
+  let text = html;
+  
+  // First pass: Mark paragraph boundaries with a special marker
+  text = text.replace(/<\/p>\s*<p[^>]*>/gi, '|||PARAGRAPH_BREAK|||');
+  
+  // Handle empty paragraphs (these represent intentional line breaks)
+  text = text.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi, '\n\n');
+  
+  // Convert br tags to newlines
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  
+  // Remove paragraph tags without adding newlines
+  // (newlines are already handled by the paragraph break marker)
+  text = text.replace(/<p[^>]*>/gi, '');
+  text = text.replace(/<\/p>/gi, '');
+  
+  // Remove all other HTML tags
+  text = text.replace(/<[^>]*>/g, '');
+  
+  // Convert paragraph break markers to double newlines
+  text = text.replace(/\|\|\|PARAGRAPH_BREAK\|\|\|/g, '\n\n');
+  
+  // Decode HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    // Be more conservative with newline normalization to preserve structure
-    .replace(/\n{4,}/g, '\n\n\n') // Only normalize excessive line breaks (4+) to triple
-    .replace(/^\n+/g, '') // Trim leading newlines only
-    .replace(/\n+$/g, '') // Trim trailing newlines only
-    .trim();
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/');
+  
+  // Clean up excessive newlines only at boundaries
+  text = text.replace(/^\n+/, ''); // Remove leading newlines
+  text = text.replace(/\n+$/, ''); // Remove trailing newlines
+  
+  return text;
 }
 
 /**

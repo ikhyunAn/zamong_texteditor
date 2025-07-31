@@ -296,12 +296,20 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
       
       // Create immutable update with better performance
       const updatedPages = [...state.pages];
+      const oldContent = updatedPages[pageIndex].content || '';
       updatedPages[pageIndex] = { ...updatedPages[pageIndex], content };
       
-      console.log(`[updatePage] Updated page ${pageId} with content length: ${content.length}`);
+      // Log detailed update info
+      const oldNewlines = oldContent.split('\n').length - 1;
+      const newNewlines = content.split('\n').length - 1;
+      console.log(`[updatePage] Page ${pageId}:`);
+      console.log(`  Old: ${oldContent.length} chars, ${oldNewlines} newlines`);
+      console.log(`  New: ${content.length} chars, ${newNewlines} newlines`);
       
-      // Update global content for consistency
-      const globalContent = updatedPages.map(page => page.content).join('\n\n');
+      // Update global content - preserve page structures without adding extra newlines
+      const globalContent = updatedPages
+        .map(page => page.content || '')
+        .join(''); // Join directly without separators
       
       return {
         ...state,
@@ -374,11 +382,14 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     }
     
     // Don't trim content to preserve line breaks at the beginning and end
-    const normalizedContent = content || '';
+    const normalizedContent = content ?? '';
     
-    // Always update page content to ensure consistency, even if content appears the same
-    // This prevents issues where the store and editor get out of sync
-    console.log(`[setCurrentPageContent] Updating page ${currentPage.id} content: "${currentPage.content?.substring(0, 50)}..." -> "${normalizedContent?.substring(0, 50)}..."`);
+    // Log detailed content changes including newline counts
+    const oldNewlines = (currentPage.content || '').split('\n').length - 1;
+    const newNewlines = normalizedContent.split('\n').length - 1;
+    console.log(`[setCurrentPageContent] Page ${currentPage.id}:`);
+    console.log(`  Old content: ${(currentPage.content || '').length} chars, ${oldNewlines} newlines`);
+    console.log(`  New content: ${normalizedContent.length} chars, ${newNewlines} newlines`);
     
     // Use a more robust update approach
     const updatedPages = pages.map((page, index) => 
@@ -390,8 +401,10 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     // Update pages atomically
     set({ pages: updatedPages });
     
-    // Update global content to ensure consistency
-    const globalContent = updatedPages.map(page => page.content).join('\n\n');
+    // Update global content - preserve individual page structures
+    const globalContent = updatedPages
+      .map(page => page.content || '')
+      .join(''); // Join without adding separators to avoid extra newlines
     set({ content: globalContent });
   },
 
@@ -412,7 +425,7 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     set({ sections });
     
     // Update global content to be the concatenation of all pages
-    const globalContent = pages.map(page => page.content).join('\n\n');
+    const globalContent = pages.map(page => page.content || '').join('');
     set({ content: globalContent });
   },
 
