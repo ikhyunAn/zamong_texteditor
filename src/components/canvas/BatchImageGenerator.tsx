@@ -83,7 +83,8 @@ export function BatchImageGenerator() {
   const generateImageWithBackground = useCallback(async (
     section: any,
     backgroundPath: string,
-    pageNumber: number
+    pageNumber: number,
+    backgroundId?: string
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       const canvas = new fabric.Canvas(null, {
@@ -161,6 +162,26 @@ export function BatchImageGenerator() {
 
         // Add text to canvas first so Fabric.js can calculate dimensions
         canvas.add(text);
+        
+        // Add writer's name for stage 4, last page only
+        const isLastPage = pageNumber === sections.length;
+        if (isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
+          const writerName = new fabric.Text(authorInfo.name, {
+            left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
+            top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
+            fontSize: 40,
+            fontFamily: 'CustomFont', // 나눔손글씨 font family
+            fill: '#000000',
+            textAlign: 'right',
+            selectable: false,
+            evented: false
+          });
+          
+          // Measure and position correctly at the right edge
+          canvas.add(writerName);
+          const nameWidth = writerName.width || 0;
+          writerName.set({ left: EXPORT_DIMENSIONS.width - MARGIN - nameWidth });
+        }
         
         // Wait for Fabric.js to calculate dimensions in the next tick
         setTimeout(() => {
@@ -291,7 +312,7 @@ export function BatchImageGenerator() {
           setPreviewImages([...newPreviews]);
           
           try {
-            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1);
+            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1, background.id);
             preview.imageUrl = imageUrl;
             preview.isLoading = false;
           } catch (error) {
@@ -353,7 +374,7 @@ export function BatchImageGenerator() {
           
           try {
             // Generate the image
-            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1);
+            const imageUrl = await generateImageWithBackground(section, background.path, pageIndex + 1, background.id);
             
             // Convert blob URL to blob
             const response = await fetch(imageUrl);
