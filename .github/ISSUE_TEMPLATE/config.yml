@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 General Discussion
+    url: https://github.com/org/repo/discussions
+    about: Ask questions, share ideas, and discuss with the community
+  - name: 📖 Documentation
+    url: https://github.com/org/repo/wiki
+    about: Check the documentation and wiki for answers
+  - name: 🔒 Security Issues
+    url: https://github.com/org/repo/security/advisories/new
+    about: Report security vulnerabilities privately
