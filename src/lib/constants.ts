@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // Default Text Styles
 export const DEFAULT_TEXT_STYLE = {
-  fontFamily: 'CustomFontTTF',
+  fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
   fontSize: 36,
   color: '#000000',
   position: { x: 50, y: 50 },
@@ -65,15 +65,20 @@ export const AVAILABLE_FONTS = [
 ];
 
 // Helper function to get recommended font based on language
-export function getRecommendedFontForLanguage(language: 'ko' | 'en'): string {
+export function getRecommendedFontForLanguage(_language: 'ko' | 'en'): string {
   // Since users write in Korean regardless of UI language mode,
-  // always recommend CustomFontTTF (학교안심) which works well for Korean content
-  return 'CustomFontTTF';
+  // use Regular weight for body text
+  return 'HakgyoansimBareonbatangR';
+}
+
+// Helper function to get body text font (user-typed content)
+export function getBodyFont(): string {
+  return 'HakgyoansimBareonbatangR'; // 학교안심 Regular - for body text
 }
 
 // Helper function to get title font
 export function getTitleFont(): string {
-  return 'CustomFontTTF'; // 학교안심 - same as body text
+  return 'HakgyoansimBareonbatangB'; // 학교안심 Bold - for titles
 }
 
 // Helper function to get author name font
@@ -105,8 +110,8 @@ export const EDITOR_SETTINGS = {
   maxLines: 25,
   lineHeight: 1.5,
   fontSize: 16,
-  fontFamily: 'CustomFontTTF',
-  titleFontFamily: 'CustomFontTTF', // Same as body text - 학교안심
+  fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
+  titleFontFamily: 'HakgyoansimBareonbatangB', // Bold weight for titles
   authorFontFamily: 'CustomFont', // Author name font - 나눔손글씨
   backgroundColor: 'transparent',
   textColor: '#000000',

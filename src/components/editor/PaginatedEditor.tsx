@@ -110,13 +110,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     initializeWithEmptyPage();
   }, [initializeWithEmptyPage]);
 
-  // Force Korean font on component mount (ensure consistency)
+  // Force Korean body font on component mount (ensure consistency)
   useEffect(() => {
-    const koreanFont = 'CustomFontTTF';
-    if (editorSettings.fontFamily !== koreanFont) {
-      console.log(`[Font Init] Forcing Korean font on mount: ${koreanFont}`);
-      setFontFamily(koreanFont);
-      setSelectedFont(koreanFont);
+    const bodyFont = 'HakgyoansimBareonbatangR'; // Regular weight for body text
+    if (editorSettings.fontFamily !== bodyFont) {
+      console.log(`[Font Init] Setting Korean body font on mount: ${bodyFont}`);
+      setFontFamily(bodyFont);
+      setSelectedFont(bodyFont);
     }
   }, []); // Only run on mount
 
@@ -671,20 +671,20 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 
   // Ensure font consistency - sync selectedFont with global settings
   useEffect(() => {
-    const koreanFont = 'CustomFontTTF'; // 학교안심 font works well for Korean content
+    const bodyFont = 'HakgyoansimBareonbatangR'; // Regular weight for body text
     
     // Only update if there's actually a mismatch to prevent unnecessary re-renders
-    if (editorSettings.fontFamily !== koreanFont || selectedFont !== koreanFont) {
-      console.log(`[Font Sync] Ensuring Korean font: ${koreanFont}`);
+    if (editorSettings.fontFamily !== bodyFont || selectedFont !== bodyFont) {
+      console.log(`[Font Sync] Ensuring Korean body font: ${bodyFont}`);
       
       // Update global settings only if needed
-      if (editorSettings.fontFamily !== koreanFont) {
-        setFontFamily(koreanFont);
+      if (editorSettings.fontFamily !== bodyFont) {
+        setFontFamily(bodyFont);
       }
       
       // Update local state only if needed
-      if (selectedFont !== koreanFont) {
-        setSelectedFont(koreanFont);
+      if (selectedFont !== bodyFont) {
+        setSelectedFont(bodyFont);
       }
     }
   }, [editorSettings.fontFamily, selectedFont, setFontFamily]); // Removed language dependency

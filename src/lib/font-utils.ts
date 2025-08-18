@@ -44,9 +44,10 @@ export async function loadFontForCanvas(
  */
 export async function loadCustomFonts(): Promise<void> {
   const fonts: FontConfig[] = [
-    { name: 'CustomFontTTF', url: '/fonts/HakgyoansimBareonbatangB.ttf' },
-    { name: 'CustomFont', url: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf' },
-    { name: 'HakgyoansimBareonbatangR', url: '/fonts/HakgyoansimBareonbatangR.ttf' }
+    { name: 'HakgyoansimBareonbatangB', url: '/fonts/HakgyoansimBareonbatangB.ttf' }, // Bold for titles
+    { name: 'HakgyoansimBareonbatangR', url: '/fonts/HakgyoansimBareonbatangR.ttf' }, // Regular for body
+    { name: 'CustomFont', url: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf' }, // Author names
+    { name: 'CustomFontTTF', url: '/fonts/HakgyoansimBareonbatangB.ttf' } // Legacy alias
   ];
   
   const loadingPromises = fonts.map(font => 

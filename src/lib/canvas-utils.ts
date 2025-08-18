@@ -19,6 +19,7 @@ export interface CanvasTextConfig {
   canvasWidth: number;
   canvasHeight: number;
   globalAlignment?: 'left' | 'center' | 'right';
+  isTitle?: boolean; // Flag to indicate if this is title text (requires bold weight)
 }
 
 /**
@@ -191,9 +192,25 @@ export function addTextToCanvas(
     let fontFamily = editorSettings?.fontFamily || textStyle.fontFamily;
     const lineHeight = editorSettings?.lineHeight || 1.5;
     
-    // Ensure font consistency - always use CustomFontTTF for Korean content
-    if (!fontFamily || fontFamily === 'Arial' || fontFamily === 'sans-serif') {
-      fontFamily = 'CustomFontTTF';
+    // Determine font weight based on text type (title vs body)
+    if (config.isTitle) {
+      // Use Bold weight for titles
+      fontFamily = 'HakgyoansimBareonbatangB';
+    } else {
+      // Ensure font consistency - use Regular weight for body text
+      if (!fontFamily || fontFamily === 'Arial' || fontFamily === 'sans-serif') {
+        fontFamily = 'HakgyoansimBareonbatangR'; // Regular weight for body text
+      }
+      
+      // Handle legacy font references
+      if (fontFamily === 'CustomFontTTF') {
+        fontFamily = 'HakgyoansimBareonbatangR'; // Use Regular weight for body text
+      }
+      
+      // Handle any bold references that should be regular for body text
+      if (fontFamily === 'HakgyoansimBareonbatangB') {
+        fontFamily = 'HakgyoansimBareonbatangR'; // Use Regular weight for body text
+      }
     }
     
     // Get fallback font to ensure it's available

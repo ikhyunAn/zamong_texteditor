@@ -18,9 +18,10 @@ export function FontPreloader({ children }: FontPreloaderProps) {
         
         // Force load all our custom fonts by checking if they're available
         const fontsToCheck = [
-          'CustomFontTTF',
-          'CustomFont', 
-          'HakgyoansimBareonbatangR'
+          'HakgyoansimBareonbatangB', // Bold for titles
+          'HakgyoansimBareonbatangR', // Regular for body text
+          'CustomFont',               // 나눔손글씨 for author names
+          'CustomFontTTF'             // Legacy alias
         ];
 
         const checkPromises = fontsToCheck.map(fontFamily => 
@@ -85,9 +86,14 @@ export function FontPreloader({ children }: FontPreloaderProps) {
           안녕하세요 Hello 나눔손글씨 CustomFont
         </div>
         
-        {/* Force load HakgyoansimBareonbatangR */}
+        {/* Force load HakgyoansimBareonbatangR (Regular for body) */}
         <div style={{ fontFamily: 'HakgyoansimBareonbatangR' }}>
-          안녕하세요 Hello 학교안심 HakgyoansimBareonbatangR
+          안녕하세요 Hello 학교안심 Regular HakgyoansimBareonbatangR
+        </div>
+        
+        {/* Force load HakgyoansimBareonbatangB (Bold for titles) */}
+        <div style={{ fontFamily: 'HakgyoansimBareonbatangB' }}>
+          안녕하세요 Hello 학교안심 Bold HakgyoansimBareonbatangB
         </div>
       </div>
       

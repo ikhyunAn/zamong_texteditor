@@ -35,7 +35,12 @@ export function debugFontStatus(fontFamily: string): FontDebugInfo {
  * Debug all custom fonts
  */
 export function debugAllFonts(): FontDebugInfo[] {
-  const fonts = ['CustomFontTTF', 'CustomFont', 'HakgyoansimBareonbatangR'];
+  const fonts = [
+    'HakgyoansimBareonbatangB', // Bold for titles
+    'HakgyoansimBareonbatangR', // Regular for body text
+    'CustomFont',               // 나눔손글씨 for author names
+    'CustomFontTTF'             // Legacy alias
+  ];
   return fonts.map(debugFontStatus);
 }
 

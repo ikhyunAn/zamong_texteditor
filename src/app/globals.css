@@ -3,14 +3,26 @@
 @tailwind utilities;
 
 /* Custom Font Declarations */
+
+/* 학교안심 Bold - for titles */
 @font-face {
-  font-family: 'CustomFontTTF';
+  font-family: 'HakgyoansimBareonbatangB';
   src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
   font-display: swap;
 }
 
+/* 학교안심 Regular - for body text */
+@font-face {
+  font-family: 'HakgyoansimBareonbatangR';
+  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 나눔손글씨 - for author names */
 @font-face {
   font-family: 'CustomFont';
   src: url('/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf') format('truetype');
@@ -19,10 +31,11 @@
   font-display: swap;
 }
 
+/* Legacy aliases for backward compatibility */
 @font-face {
-  font-family: 'HakgyoansimBareonbatangR';
-  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
-  font-weight: normal;
+  font-family: 'CustomFontTTF';
+  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
+  font-weight: bold;
   font-style: normal;
   font-display: swap;
 }
@@ -219,19 +232,29 @@
 }
 
 /* Custom Font Utility Classes */
+
+/* Body text - Regular weight for user-typed content */
 .font-korean-body {
-  font-family: 'CustomFontTTF', '학교안심', 'HakgyoansimBareonbatangB', Arial, sans-serif;
+  font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif;
 }
 
+/* Titles - Bold weight for titles */
 .font-korean-title {
+  font-family: 'HakgyoansimBareonbatangB', '학교안심', Arial, sans-serif;
+  font-weight: bold;
+}
+
+/* Author names - Special handwriting font */
+.font-korean-author {
   font-family: 'CustomFont', '나눔손글씨', 'Nanum Handwriting', Arial, sans-serif;
 }
 
+/* Legacy support for existing classes */
 .font-korean-regular {
   font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif;
 }
 
-/* Tiptap Editor Font Override */
+/* Tiptap Editor Font Override - use Regular weight for user content */
 .ProseMirror {
-  font-family: 'CustomFontTTF', '학교안심', 'HakgyoansimBareonbatangB', Arial, sans-serif !important;
+  font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif !important;
 }
