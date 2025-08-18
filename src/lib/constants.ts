@@ -51,17 +51,35 @@ export const AVAILABLE_FONTS = [
   {
     name: '나눔손글씨',
     family: 'CustomFont',
-    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
-    type: 'custom' as const
+    path: 'public/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    type: 'custom' as const,
+    languages: ['ko'] as const // Best for Korean
   },
   {
     name: '학교안심',
     family: 'CustomFontTTF',
-    path: '/fonts/HakgyoansimBareonbatangB.ttf',
-    type: 'custom' as const
+    path: 'public/fonts/HakgyoansimBareonbatangB.ttf',
+    type: 'custom' as const,
+    languages: ['ko', 'en'] as const
   }
 ];
 
+// Helper function to get recommended font based on language
+export function getRecommendedFontForLanguage(language: 'ko' | 'en'): string {
+  // Since users write in Korean regardless of UI language mode,
+  // always recommend CustomFontTTF (학교안심) which works well for Korean content
+  return 'CustomFontTTF';
+}
+
+// Helper function to get title font
+export function getTitleFont(): string {
+  return 'CustomFontTTF'; // 학교안심 - same as body text
+}
+
+// Helper function to get author name font
+export function getAuthorFont(): string {
+  return 'CustomFont'; // 나눔손글씨 딸에게 엄마가
+}
 
 // Text Colors
 export const TEXT_COLORS = [
@@ -88,6 +106,8 @@ export const EDITOR_SETTINGS = {
   lineHeight: 1.5,
   fontSize: 16,
   fontFamily: 'CustomFontTTF',
+  titleFontFamily: 'CustomFontTTF', // Same as body text - 학교안심
+  authorFontFamily: 'CustomFont', // Author name font - 나눔손글씨
   backgroundColor: 'transparent',
   textColor: '#000000',
   padding: {

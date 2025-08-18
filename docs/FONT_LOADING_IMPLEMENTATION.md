@@ -103,9 +103,11 @@ const fontFamily = getFallbackFont(preferredFont);
 
 ## Supported Fonts
 
-1. **CustomFontTTF**: HakgyoansimBareonbatangB.ttf
-2. **CustomFont**: 작가폰트_나눔손글씨 딸에게 엄마가.ttf
-3. **HakgyoansimBareonbatangR**: HakgyoansimBareonbatangR.ttf
+All font rendering consistently uses **CustomFontTTF** (HakgyoansimBareonbatangB.ttf) since users write Korean content regardless of UI language mode.
+
+1. **CustomFontTTF**: HakgyoansimBareonbatangB.ttf (Primary Korean font - used for all modes)
+2. **CustomFont**: 작가폰트_나눔손글씨 딸에게 엄마가.ttf (Alternative Korean font)
+3. **HakgyoansimBareonbatangR**: HakgyoansimBareonbatangR.ttf (Korean regular weight)
 
 ## Error Recovery
 
@@ -129,3 +131,47 @@ const fontFamily = getFallbackFont(preferredFont);
 3. **Lazy Loading**: Load fonts only when needed for specific text styles
 4. **Font Validation**: Validate font files before loading
 5. **Cache Management**: Implement font caching strategies
+
+## Latest Fixes (January 2025)
+
+### Problem: Font Inconsistency Between Language Modes
+- **Issue**: Different fonts were showing when switching between English and Korean UI modes
+- **Root Cause**: Hardcoded font references in various components and unsynchronized font state
+- **Solution**: Complete font reference unification and state synchronization
+
+### Key Changes Made:
+
+1. **Eliminated All Hardcoded Font References**:
+   - `PaginatedEditor.tsx`: Replaced hardcoded 'HakgyoansimBareonbatangB' with `selectedFont`
+   - `PagedDocumentEditor.tsx`: Same font consistency approach
+   - `BatchImageGenerator.tsx`: Replaced all hardcoded font names with `editorSettings.fontFamily || 'CustomFontTTF'`
+
+2. **Added Font Enforcement Logic**:
+   - Both editors now enforce `CustomFontTTF` on mount and language change via useEffect
+   - Ensures UI language switching doesn't affect content font
+
+3. **Unified Font Alias Usage**:
+   - All components now reference `CustomFontTTF` alias consistently
+   - Canvas rendering, image generation, and editor all use the same font reference
+
+4. **Updated Helper Functions**:
+   - `getRecommendedFont()` always returns `CustomFontTTF`
+   - Default editor settings consistently use `CustomFontTTF`
+
+### Result:
+- Single consistent Korean-compatible font (`CustomFontTTF`) used everywhere
+- No font changes when switching UI language modes
+- All text rendering (editor, canvas, exports) uses the same font
+
+### Additional Fix (August 2025):
+- **Problem**: Font was still changing visually while typing when switching language modes
+- **Root Cause**: useEffect hooks were triggering font state updates on every language change, causing visual font switches during typing
+- **Solution**: Removed `language` dependency from font enforcement useEffect hooks and made font updates more conservative (only when actually needed)
+- **Result**: Font remains visually stable while typing, regardless of language mode switching
+
+### Title Font Customization (August 2025):
+- **Feature**: Separate font for titles vs body text
+- **Implementation**: Added `getTitleFont()` helper and `titleFontFamily` to EDITOR_SETTINGS
+- **Title Font**: Uses "작가폰트_나눔손글씨 딸에게 엄마가" (`CustomFont` alias)
+- **Body Font**: Continues to use "학교안심" (`CustomFontTTF` alias)
+- **Coverage**: Both editor display and image generation use the title font for titles

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStoryStore } from '@/store/useStoryStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowRight } from 'lucide-react';
 
 export function AuthorInfoForm() {
+  const { t } = useTranslation('common');
   const { authorInfo, setAuthorInfo, setCurrentStep } = useStoryStore();
   const [formData, setFormData] = useState(authorInfo);
 
@@ -16,7 +18,7 @@ export function AuthorInfoForm() {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.title.trim()) {
-      alert('Please fill in both your name and story title.');
+      alert(t('authorForm.validationError'));
       return;
     }
     
@@ -31,19 +33,19 @@ export function AuthorInfoForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Get Started</CardTitle>
+        <CardTitle>{t('authorForm.title')}</CardTitle>
         <CardDescription>
-          Enter your information to begin creating your Instagram story posts
+          {t('authorForm.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="authorName">Your Name</Label>
+            <Label htmlFor="authorName">{t('authorForm.nameLabel')}</Label>
             <Input
               id="authorName"
               type="text"
-              placeholder="Enter your name"
+              placeholder={t('authorForm.namePlaceholder')}
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               className="w-full"
@@ -51,11 +53,11 @@ export function AuthorInfoForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="storyTitle">Story Title</Label>
+            <Label htmlFor="storyTitle">{t('authorForm.storyTitleLabel')}</Label>
             <Input
               id="storyTitle"
               type="text"
-              placeholder="Enter your story title"
+              placeholder={t('authorForm.storyTitlePlaceholder')}
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
               className="w-full"
@@ -67,7 +69,7 @@ export function AuthorInfoForm() {
             className="w-full"
             disabled={!formData.name.trim() || !formData.title.trim()}
           >
-            Continue to Story Editor
+            {t('authorForm.continueButton')}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </form>

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { usePageManager } from '@/hooks/usePageManager';
-import { AVAILABLE_FONTS } from '@/lib/constants';
+import { AVAILABLE_FONTS, getTitleFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import EnhancedTextarea, { EnhancedTextareaRef } from '@/components/ui/enhanced-textarea';
@@ -119,8 +120,10 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     currentPageIndex,
     getCurrentPageContent,
     initializeWithEmptyPage,
-    setTextAlignment
+    setTextAlignment,
+    setFontFamily
   } = useStoryStore();
+  const { language } = useLanguageStore();
   
   const {
     getPageInfo,
@@ -130,7 +133,7 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     updateCurrentPageContent
   } = usePageManager();
   
-  const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[0].family);
+  const [selectedFont, setSelectedFont] = useState(editorSettings.fontFamily);
 const [showLineWarning, setShowLineWarning] = useState(false);
   const [backgroundPreview, setBackgroundPreview] = useState(true);
   
@@ -139,11 +142,48 @@ const [showLineWarning, setShowLineWarning] = useState(false);
     initializeWithEmptyPage();
   }, [initializeWithEmptyPage]);
   
-  // Clear caches when font changes
+  // Force Korean font on component mount (ensure consistency)
+  useEffect(() => {
+    const koreanFont = 'CustomFontTTF';
+    if (editorSettings.fontFamily !== koreanFont) {
+      console.log(`[Font Init] Forcing Korean font on mount: ${koreanFont}`);
+      setFontFamily(koreanFont);
+      setSelectedFont(koreanFont);
+    }
+  }, []); // Only run on mount
+  
+  // Clear caches when font changes and apply CSS classes
   useEffect(() => {
     fontMetricsCache.clear();
     lineCalculationCache.clear();
   }, [selectedFont]);
+  
+  // Sync local font state with global settings
+  useEffect(() => {
+    if (editorSettings.fontFamily !== selectedFont) {
+      setSelectedFont(editorSettings.fontFamily);
+    }
+  }, [editorSettings.fontFamily, selectedFont]);
+
+  // Ensure font consistency - sync selectedFont with global settings
+  useEffect(() => {
+    const koreanFont = 'CustomFontTTF'; // 학교안심 font works well for Korean content
+    
+    // Only update if there's actually a mismatch to prevent unnecessary re-renders
+    if (editorSettings.fontFamily !== koreanFont || selectedFont !== koreanFont) {
+      console.log(`[Font Sync] Ensuring Korean font: ${koreanFont}`);
+      
+      // Update global settings only if needed
+      if (editorSettings.fontFamily !== koreanFont) {
+        setFontFamily(koreanFont);
+      }
+      
+      // Update local state only if needed
+      if (selectedFont !== koreanFont) {
+        setSelectedFont(koreanFont);
+      }
+    }
+  }, [editorSettings.fontFamily, selectedFont, setFontFamily]); // Removed language dependency
   
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -196,7 +236,11 @@ const [showLineWarning, setShowLineWarning] = useState(false);
             <Type className="w-4 h-4" />
             <select 
               value={selectedFont} 
-              onChange={(e) => setSelectedFont(e.target.value)}
+              onChange={(e) => {
+                const fontFamily = e.target.value;
+                setSelectedFont(fontFamily);
+                setFontFamily(fontFamily);
+              }}
               className="px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {AVAILABLE_FONTS.map((font) => (

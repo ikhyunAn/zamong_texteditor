@@ -1,0 +1,119 @@
+{
+  "app": {
+    "title": "Zamong Text Editor",
+    "subtitle": "Transform your stories into beautiful Storycards",
+    "loading": "Loading application..."
+  },
+  "steps": {
+    "authorInfo": "Author Info",
+    "writeStory": "Write Story",
+    "generateImages": "Generate Images"
+  },
+  "authorForm": {
+    "title": "Get Started",
+    "description": "Enter your information to begin creating your Instagram story posts",
+    "nameLabel": "Your Name",
+    "namePlaceholder": "Enter your name",
+    "storyTitleLabel": "Story Title",
+    "storyTitlePlaceholder": "Enter your story title",
+    "continueButton": "Continue to Story Editor",
+    "validationError": "Please fill in both your name and story title."
+  },
+  "editor": {
+    "title": "Paginated Story Editor",
+    "loading": "Loading editor...",
+    "textAlignment": "Text Alignment:",
+    "verticalAlignment": "Vertical Alignment:",
+    "fontSize": "Font Size:",
+    "lineHeight": "Line Height:",
+    "alignLeft": "Align left",
+    "alignCenter": "Align center",
+    "alignRight": "Align right",
+    "alignTop": "Align top",
+    "alignMiddle": "Align middle",
+    "alignBottom": "Align bottom",
+    "decreaseFontSize": "Decrease font size",
+    "increaseFontSize": "Increase font size",
+    "lineHeightLabel": "Line height",
+    "synchronize": "Synchronize",
+    "synchronizeTitle": "Synchronize Content",
+    "insertPageBreak": "Insert Page Break",
+    "insertPageBreakTitle": "Insert page break (Ctrl+Enter)",
+    "addNewPage": "Add New Page",
+    "addNewPageTitle": "Add new page (Ctrl+Shift+N)",
+    "characters": "Characters:",
+    "page": "Page",
+    "previousPage": "Previous Page",
+    "previousPageTitle": "Previous page (Ctrl+←)",
+    "nextPage": "Next Page",
+    "nextPageTitle": "Next page (Ctrl+→)",
+    "pageOf": "Page {{current}} of {{total}}",
+    "pagesOverLimit": "{{count}} pages over limit",
+    "totalPages": "Total Pages",
+    "sections": "Sections",
+    "pageCharacters": "Page Characters",
+    "backToAuthorInfo": "Back to Author Info",
+    "previewExport": "Preview & Export",
+    "incompleteContent": "Incomplete Content",
+    "incompleteContentMessage": "Please write some content before proceeding.",
+    "pageBreakMessages": {
+      "editorNotReady": "Editor is not ready. Please try again.",
+      "maxPagesReached": "Cannot insert page break. Maximum of 6 pages allowed.",
+      "emptyPage": "Cannot insert page break on empty page. Add some content first.",
+      "integrityFailed": "Page break operation failed. Content integrity could not be preserved.",
+      "success": "Page break inserted successfully!",
+      "contentRestored": "Content integrity restored!",
+      "contentRestoredFirstPage": "Content integrity restored for first page!",
+      "syncSuccess": "Content synchronized successfully!",
+      "editorNotReadySync": "Editor not ready. Please try again."
+    }
+  },
+  "export": {
+    "title": "Preview & Export",
+    "description": "Generate images for all {{count}} page{{plural}} with 4 different background styles. Each page will create 4 different versions (Stage 1-4).",
+    "hideBackgrounds": "Hide Backgrounds",
+    "showBackgrounds": "Show Backgrounds",
+    "totalPages": "Total pages: {{count}}",
+    "totalImages": "Total images to generate: {{count}}",
+    "previewGallery": "Preview Gallery",
+    "previewDescription": "Preview all pages with different background styles. Click on any image to zoom in or download individually.",
+    "generatingPreviews": "Generating previews...",
+    "generateDownloadZip": "Generate & Download ZIP",
+    "zipDescription": "Generate all images and download them as a ZIP file organized by background stages.",
+    "generateDownloadAll": "Generate & Download All Images",
+    "exportCompleted": "Export completed successfully!",
+    "backToWriteStory": "Back to Write Story",
+    "startNewStory": "Start New Story",
+    "downloadThisImage": "Download This Image",
+    "imageNotAvailable": "Image not available",
+    "noContent": "No content available. Please go back and create your story content.",
+    "errors": {
+      "previewError": "Preview Error",
+      "previewFailed": "Failed to generate previews",
+      "noContent": "No Content",
+      "noContentMessage": "Please create some story content first",
+      "exportError": "Export Error",
+      "exportFailed": "Failed to export images",
+      "generationError": "Generation Error",
+      "generationFailed": "Failed to generate image for {{background}} - Page {{page}}",
+      "folderCreationFailed": "Failed to create folder for {{background}}",
+      "backgroundLoadFailed": "Failed to load background image",
+      "canvasExportFailed": "Failed to export canvas: {{error}}"
+    },
+    "progress": {
+      "initializing": "Initializing...",
+      "generating": "Generating {{background}} - Page {{page}}",
+      "creatingZip": "Creating ZIP file...",
+      "complete": "Complete!"
+    },
+    "success": {
+      "exportComplete": "Export Complete",
+      "downloadSuccess": "Your images have been downloaded successfully!"
+    }
+  },
+  "language": {
+    "toggle": "Toggle Language",
+    "current": "EN",
+    "switchTo": "한국어"
+  }
+}

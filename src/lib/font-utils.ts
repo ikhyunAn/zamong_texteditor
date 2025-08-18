@@ -86,10 +86,48 @@ export async function loadAvailableFonts(): Promise<void> {
 }
 
 /**
- * Check if a font is loaded and available
+ * Check if a font is loaded and available (CSS or JS)
  */
 export function isFontLoaded(fontFamily: string): boolean {
-  return document.fonts.check(`16px "${fontFamily}"`);
+  if (typeof document === 'undefined') return false;
+  
+  try {
+    // Check both with and without quotes to be comprehensive
+    return document.fonts.check(`16px "${fontFamily}"`) || 
+           document.fonts.check(`16px ${fontFamily}`);
+  } catch (error) {
+    console.warn(`Error checking font availability for ${fontFamily}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Check if all our custom fonts are loaded
+ */
+export function areCustomFontsLoaded(): boolean {
+  const requiredFonts = ['CustomFontTTF', 'CustomFont', 'HakgyoansimBareonbatangR'];
+  return requiredFonts.every(font => isFontLoaded(font));
+}
+
+/**
+ * Wait for CSS fonts to be ready
+ */
+export async function waitForCSSFonts(timeout: number = 5000): Promise<boolean> {
+  if (typeof document === 'undefined') return false;
+  
+  try {
+    // Race between font loading and timeout
+    const fontLoadPromise = document.fonts.ready;
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Font loading timeout')), timeout)
+    );
+    
+    await Promise.race([fontLoadPromise, timeoutPromise]);
+    return true;
+  } catch (error) {
+    console.warn('CSS font loading timed out or failed:', error);
+    return false;
+  }
 }
 
 /**

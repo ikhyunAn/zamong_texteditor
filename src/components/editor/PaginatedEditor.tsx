@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useTranslation } from 'react-i18next';
 import StarterKit from '@tiptap/starter-kit';
 import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
+import { useLanguageStore } from '../../store/useLanguageStore';
 import { usePageManager } from '../../hooks/usePageManager';
-import { AVAILABLE_FONTS, LINE_HEIGHT_OPTIONS } from '@/lib/constants';
+import { AVAILABLE_FONTS, LINE_HEIGHT_OPTIONS, getRecommendedFontForLanguage, getTitleFont, getAuthorFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { debounce } from '../../lib/debounce';
@@ -46,6 +48,7 @@ const PAGE_HEIGHT = 1600;
 const PAGE_PADDING = 60;
 
 const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
+  const { t } = useTranslation('common');
   const { 
     editorSettings, 
     sections, 
@@ -55,11 +58,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     initializeWithEmptyPage,
     setTextAlignment,
     setVerticalAlignment,
+    setFontFamily,
     increaseFontSize,
     decreaseFontSize,
     setLineHeight,
     authorInfo
   } = useStoryStore();
+  const { language } = useLanguageStore();
   const { 
     totalPages, 
     getPageInfo, 
@@ -70,7 +75,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     storeUpdatePage: updatePage
   } = usePageManager();
   
-  const [selectedFont, setSelectedFont] = useState(AVAILABLE_FONTS[1].family); // Default to CustomFontTTF
+  const [selectedFont, setSelectedFont] = useState(editorSettings.fontFamily); // Use font from global settings
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +109,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   useEffect(() => {
     initializeWithEmptyPage();
   }, [initializeWithEmptyPage]);
+
+  // Force Korean font on component mount (ensure consistency)
+  useEffect(() => {
+    const koreanFont = 'CustomFontTTF';
+    if (editorSettings.fontFamily !== koreanFont) {
+      console.log(`[Font Init] Forcing Korean font on mount: ${koreanFont}`);
+      setFontFamily(koreanFont);
+      setSelectedFont(koreanFont);
+    }
+  }, []); // Only run on mount
 
   const editor = useEditor({
     extensions: [
@@ -352,10 +367,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       const currentEditorHtml = editor.getHTML();
       const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
       syncContentToPage(currentEditorContent);
-      setPageBreakMessage('Content synchronized successfully!');
+      setPageBreakMessage(t('editor.pageBreakMessages.syncSuccess'));
       setTimeout(() => setPageBreakMessage(''), 2000);
     } else {
-      setPageBreakMessage('Editor not ready. Please try again.');
+      setPageBreakMessage(t('editor.pageBreakMessages.editorNotReadySync'));
       setTimeout(() => setPageBreakMessage(''), 3000);
     }
   }, [editor, syncContentToPage]);
@@ -408,12 +423,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     setPageBreakMessage('');
     
     if (!editor) {
-      setPageBreakMessage('Editor is not ready. Please try again.');
+      setPageBreakMessage(t('editor.pageBreakMessages.editorNotReady'));
       return;
     }
     
     if (pageInfo.currentPage >= 6) {
-      setPageBreakMessage('Cannot insert page break. Maximum of 6 pages allowed.');
+      setPageBreakMessage(t('editor.pageBreakMessages.maxPagesReached'));
       return;
     }
     
@@ -423,7 +438,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     
     // Check if there's any content to split
     if (!currentTextContent.trim()) {
-      setPageBreakMessage('Cannot insert page break on empty page. Add some content first.');
+      setPageBreakMessage(t('editor.pageBreakMessages.emptyPage'));
       setTimeout(() => setPageBreakMessage(''), 3000);
       return;
     }
@@ -447,13 +462,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     // Validate that the split operation preserves content integrity
     const isValid = validatePageBreakIntegrity(plainTextContent, beforeContent, afterContent);
     if (!isValid) {
-      setPageBreakMessage('Page break operation failed. Content integrity could not be preserved.');
+      setPageBreakMessage(t('editor.pageBreakMessages.integrityFailed'));
       setTimeout(() => setPageBreakMessage(''), 3000);
       return;
     }
     
     // Show success message
-    setPageBreakMessage('Page break inserted successfully!');
+    setPageBreakMessage(t('editor.pageBreakMessages.success'));
     setTimeout(() => setPageBreakMessage(''), 2000);
     
     // Update current page with content before cursor
@@ -578,6 +593,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     const fontFamily = e.target.value;
     setSelectedFont(fontFamily);
     
+    // Update global store settings so canvas operations use the correct font
+    setFontFamily(fontFamily);
+    
     if (editor) {
       // Update editor styling
       const editorElement = editor.view.dom as HTMLElement;
@@ -602,6 +620,35 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [editor, editorSettings.fontSize]);
 
+  // Sync local font state with global settings
+  useEffect(() => {
+    if (editorSettings.fontFamily !== selectedFont) {
+      setSelectedFont(editorSettings.fontFamily);
+    }
+  }, [editorSettings.fontFamily, selectedFont]);
+
+  // Update font family when it changes - use CSS classes for better consistency
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      
+      // Remove any existing font classes
+      editorElement.classList.remove('font-korean-body', 'font-korean-title', 'font-korean-regular');
+      
+      // Add appropriate font class based on selected font
+      if (selectedFont === 'CustomFontTTF') {
+        editorElement.classList.add('font-korean-body');
+      } else if (selectedFont === 'CustomFont') {
+        editorElement.classList.add('font-korean-title');
+      } else if (selectedFont === 'HakgyoansimBareonbatangR') {
+        editorElement.classList.add('font-korean-regular');
+      } else {
+        // Fallback to inline style for other fonts
+        editorElement.style.fontFamily = selectedFont;
+      }
+    }
+  }, [editor, selectedFont]);
+
   // Update vertical alignment when it changes
   useEffect(() => {
     if (editor) {
@@ -622,12 +669,32 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [editor, editorSettings.lineHeight]);
 
+  // Ensure font consistency - sync selectedFont with global settings
+  useEffect(() => {
+    const koreanFont = 'CustomFontTTF'; // 학교안심 font works well for Korean content
+    
+    // Only update if there's actually a mismatch to prevent unnecessary re-renders
+    if (editorSettings.fontFamily !== koreanFont || selectedFont !== koreanFont) {
+      console.log(`[Font Sync] Ensuring Korean font: ${koreanFont}`);
+      
+      // Update global settings only if needed
+      if (editorSettings.fontFamily !== koreanFont) {
+        setFontFamily(koreanFont);
+      }
+      
+      // Update local state only if needed
+      if (selectedFont !== koreanFont) {
+        setSelectedFont(koreanFont);
+      }
+    }
+  }, [editorSettings.fontFamily, selectedFont, setFontFamily]); // Removed language dependency
+
   if (!editor) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading editor...</p>
+          <p>{t('editor.loading')}</p>
         </div>
       </div>
     );
@@ -639,12 +706,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BookOpen className="w-5 h-5" />
-          Paginated Story Editor
+          {t('editor.title')}
         </CardTitle>
         
         {/* Text Alignment Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Text Alignment:</span>
+          <span className="text-sm font-medium text-gray-700">{t('editor.textAlignment')}</span>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -652,7 +719,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setTextAlignment('left')}
               className="h-8 w-8 p-0"
-              title="Align left"
+              title={t('editor.alignLeft')}
             >
               <AlignLeft className="w-4 h-4" />
             </Button>
@@ -663,7 +730,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setTextAlignment('center')}
               className="h-8 w-8 p-0"
-              title="Align center"
+              title={t('editor.alignCenter')}
             >
               <AlignCenter className="w-4 h-4" />
             </Button>
@@ -674,7 +741,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setTextAlignment('right')}
               className="h-8 w-8 p-0"
-              title="Align right"
+              title={t('editor.alignRight')}
             >
               <AlignRight className="w-4 h-4" />
             </Button>
@@ -683,7 +750,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         
         {/* Vertical Alignment Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Vertical Alignment:</span>
+          <span className="text-sm font-medium text-gray-700">{t('editor.verticalAlignment')}</span>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -691,7 +758,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setVerticalAlignment('top')}
               className="h-8 w-8 p-0"
-              title="Align top"
+              title={t('editor.alignTop')}
             >
               <AlignHorizontalJustifyStart className="w-4 h-4 rotate-90" />
             </Button>
@@ -702,7 +769,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setVerticalAlignment('middle')}
               className="h-8 w-8 p-0"
-              title="Align middle"
+              title={t('editor.alignMiddle')}
             >
               <AlignHorizontalJustifyCenter className="w-4 h-4 rotate-90" />
             </Button>
@@ -713,7 +780,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={() => setVerticalAlignment('bottom')}
               className="h-8 w-8 p-0"
-              title="Align bottom"
+              title={t('editor.alignBottom')}
             >
               <AlignHorizontalJustifyEnd className="w-4 h-4 rotate-90" />
             </Button>
@@ -722,7 +789,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         
         {/* Font Size Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Font Size:</span>
+          <span className="text-sm font-medium text-gray-700">{t('editor.fontSize')}</span>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -730,7 +797,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={decreaseFontSize}
               className="h-8 w-8 p-0"
-              title="Decrease font size"
+              title={t('editor.decreaseFontSize')}
               disabled={editorSettings.fontSize <= 8}
             >
               <Minus className="w-4 h-4" />
@@ -746,7 +813,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               size="sm"
               onClick={increaseFontSize}
               className="h-8 w-8 p-0"
-              title="Increase font size"
+              title={t('editor.increaseFontSize')}
               disabled={editorSettings.fontSize >= 72}
             >
               <Plus className="w-4 h-4" />
@@ -756,7 +823,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         
         {/* Line Height Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Line Height:</span>
+          <span className="text-sm font-medium text-gray-700">{t('editor.lineHeight')}</span>
           <div className="flex items-center gap-1">
             {LINE_HEIGHT_OPTIONS.map(option => (
               <Button
@@ -766,7 +833,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                 size="sm"
                 onClick={() => setLineHeight(option.value)}
                 className="text-xs px-2 py-1 h-8"
-                title={`Line height ${option.label}`}
+                title={`${t('editor.lineHeightLabel')} ${option.label}`}
               >
                 {option.value}x
               </Button>
@@ -795,10 +862,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             onClick={handleManualSync}
             size="sm"
             variant="outline"
-            title="Synchronize Content"
+            title={t('editor.synchronizeTitle')}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            Synchronize
+            {t('editor.synchronize')}
           </Button>
           
           {/* Page Break Button */}
@@ -807,9 +874,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             disabled={pageInfo.currentPage >= 6}
             size="sm"
             variant="outline"
-            title="Insert page break (Ctrl+Enter)"
+            title={t('editor.insertPageBreakTitle')}
           >
-            Insert Page Break
+            {t('editor.insertPageBreak')}
           </Button>
           
           {/* Add New Page Button */}
@@ -818,9 +885,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             disabled={pages.length >= 6}
             size="sm"
             variant="default"
-            title="Add new page (Ctrl+Shift+N)"
+            title={t('editor.addNewPageTitle')}
           >
-            Add New Page
+            {t('editor.addNewPage')}
           </Button>
         </div>
       </CardHeader>
@@ -868,7 +935,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           <div className="h-4 w-px bg-gray-300 mx-2" />
           
           <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>Characters: {editor.getText().length}</span>
+            <span>{t('editor.characters')} {editor.getText().length}</span>
           </div>
         </div>
 
@@ -885,7 +952,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             >
               {/* Page Number */}
               <div className="text-center text-sm text-gray-500 mb-2">
-                Page {pageInfo.currentPage}
+                {t('editor.page')} {pageInfo.currentPage}
               </div>
 
               {/* Page Container */}
@@ -937,7 +1004,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                     <div 
                       className="px-[60px] pt-[60px] pb-5"
                       style={{
-                        fontFamily: 'HakgyoansimBareonbatangB',
+                        fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
                         fontSize: '60px',
                         color: '#333',
                         textAlign: editorSettings.textAlignment,
@@ -979,10 +1046,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                title="Previous page (Ctrl+←)"
+                title={t('editor.previousPageTitle')}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Previous Page
+                {t('editor.previousPage')}
               </Button>
               
               {/* Page Indicators - Virtualized for large page counts */}
@@ -1043,9 +1110,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                   scrollToEditor();
                 }}
                 className="transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                title="Next page (Ctrl+→)"
+                title={t('editor.nextPageTitle')}
               >
-                Next Page
+                {t('editor.nextPage')}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -1053,12 +1120,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             {/* Page Info */}
             <div className="text-center sm:text-right">
               <div className="text-lg font-medium text-gray-800">
-                Page {pageInfo.currentPage} of {pageInfo.totalPages}
+                {t('editor.pageOf', { current: pageInfo.currentPage, total: pageInfo.totalPages })}
               </div>
               {pageInfo.totalPages > 6 && (
                 <div className="text-sm text-red-600 flex items-center justify-center sm:justify-end gap-1 mt-1">
                   <AlertCircle className="w-4 h-4" />
-                  {pageInfo.totalPages - 6} pages over limit
+                  {t('editor.pagesOverLimit', { count: pageInfo.totalPages - 6 })}
                 </div>
               )}
             </div>
@@ -1069,22 +1136,22 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="p-3 bg-blue-50 rounded-md">
             <div className="text-lg font-semibold text-blue-600">{pageInfo.totalPages}</div>
-            <div className="text-sm text-blue-600">Total Pages</div>
+            <div className="text-sm text-blue-600">{t('editor.totalPages')}</div>
           </div>
           
           <div className="p-3 bg-green-50 rounded-md">
             <div className="text-lg font-semibold text-green-600">{sections.length}</div>
-            <div className="text-sm text-green-600">Sections</div>
+            <div className="text-sm text-green-600">{t('editor.sections')}</div>
           </div>
           
           <div className="p-3 bg-purple-50 rounded-md">
             <div className="text-lg font-semibold text-purple-600">{editor.getText().length}</div>
-            <div className="text-sm text-purple-600">Characters</div>
+            <div className="text-sm text-purple-600">{t('editor.characters').replace(':', '')}</div>
           </div>
           
           <div className="p-3 bg-orange-50 rounded-md">
             <div className="text-lg font-semibold text-orange-600">{getCurrentPageContent()?.length || 0}</div>
-            <div className="text-sm text-orange-600">Page Characters</div>
+            <div className="text-sm text-orange-600">{t('editor.pageCharacters')}</div>
           </div>
         </div>
       </CardContent>
@@ -1094,13 +1161,14 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 
 // Add navigation section wrapper
 const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ className }) => {
+  const { t } = useTranslation('common');
   const { setCurrentStep, content, syncPagesToSections } = useStoryStore();
   
   const { showWarning } = useToast();
 
   const handleNext = () => {
     if (!content || content.trim() === '') {
-      showWarning('Incomplete Content', 'Please write some content before proceeding.');
+      showWarning(t('editor.incompleteContent'), t('editor.incompleteContentMessage'));
       return;
     }
     // Sync pages to sections before going to image generation
@@ -1126,14 +1194,14 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
           onClick={handleBack}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Author Info
+          {t('editor.backToAuthorInfo')}
         </Button>
         
         <Button
           type="button"
           onClick={handleNext}
         >
-          Preview & Export
+          {t('editor.previewExport')}
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

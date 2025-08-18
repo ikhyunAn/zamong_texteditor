@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Removed i18n config since we're using react-i18next directly
   webpack: (config) => {
     // Use webpack 5's built-in web worker support
     config.module.rules.push({

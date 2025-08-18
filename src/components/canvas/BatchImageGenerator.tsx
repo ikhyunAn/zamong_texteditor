@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fabric } from 'fabric';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
 import type { StorySection } from '@/types';
+import { getTitleFont, getAuthorFont } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +46,7 @@ interface ExportProgress {
 }
 
 export function BatchImageGenerator() {
+  const { t } = useTranslation('common');
   const { 
     sections,
     authorInfo,
@@ -119,7 +122,7 @@ export function BatchImageGenerator() {
             top: topOffset,
             width: contentWidth,
             fontSize: 60,
-            fontFamily: 'HakgyoansimBareonbatangB',
+            fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
             fill: textStyle.color || '#000000',
             textAlign: editorSettings.globalTextAlignment || 'left',
             selectable: false,
@@ -176,7 +179,7 @@ export function BatchImageGenerator() {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
             fontSize: 40,
-            fontFamily: 'CustomFont', // 나눔손글씨 font family
+            fontFamily: getAuthorFont(), // Use 나눔손글씨 for author name
             fill: '#000000',
             textAlign: 'right',
             selectable: false,
@@ -337,7 +340,7 @@ export function BatchImageGenerator() {
       }
     } catch (error) {
       console.error('Preview generation error:', error);
-      showError('Preview Error', 'Failed to generate previews');
+      showError(t('export.errors.previewError'), t('export.errors.previewFailed'));
     } finally {
       setIsGeneratingPreviews(false);
     }
@@ -346,7 +349,7 @@ export function BatchImageGenerator() {
   // Function to generate and download ZIP file
   const handleGenerateAndDownload = async () => {
     if (!sections || sections.length === 0) {
-      showError('No Content', 'Please create some story content first');
+      showError(t('export.errors.noContent'), t('export.errors.noContentMessage'));
       return;
     }
     
@@ -354,7 +357,7 @@ export function BatchImageGenerator() {
     setExportProgress({
       current: 0,
       total: sections.length * DEFAULT_BACKGROUNDS.length,
-      stage: 'Initializing...',
+      stage: t('export.progress.initializing'),
       isComplete: false
     });
     
@@ -367,7 +370,7 @@ export function BatchImageGenerator() {
       for (const background of DEFAULT_BACKGROUNDS) {
         const stageFolder = zip.folder(`${folderName}/${background.name.replace(/\s+/g, '_')}`);
         if (!stageFolder) {
-          throw new Error(`Failed to create folder for ${background.name}`);
+          throw new Error(t('export.errors.folderCreationFailed', { background: background.name }));
         }
         
         // Generate images for each section with this background
@@ -377,7 +380,7 @@ export function BatchImageGenerator() {
           setExportProgress({
             current: currentProgress,
             total: sections.length * DEFAULT_BACKGROUNDS.length,
-            stage: `Generating ${background.name} - Page ${pageIndex + 1}`,
+            stage: t('export.progress.generating', { background: background.name, page: pageIndex + 1 }),
             isComplete: false
           });
           
@@ -398,7 +401,7 @@ export function BatchImageGenerator() {
             
           } catch (error) {
             console.error(`Error generating image for ${background.name} - Page ${pageIndex + 1}:`, error);
-            showError('Generation Error', `Failed to generate image for ${background.name} - Page ${pageIndex + 1}`);
+            showError(t('export.errors.generationError'), t('export.errors.generationFailed', { background: background.name, page: pageIndex + 1 }));
           }
           
           currentProgress++;
@@ -409,7 +412,7 @@ export function BatchImageGenerator() {
       setExportProgress({
         current: currentProgress,
         total: sections.length * DEFAULT_BACKGROUNDS.length,
-        stage: 'Creating ZIP file...',
+        stage: t('export.progress.creatingZip'),
         isComplete: false
       });
       
@@ -432,14 +435,14 @@ export function BatchImageGenerator() {
       setExportProgress({
         current: currentProgress,
         total: sections.length * DEFAULT_BACKGROUNDS.length,
-        stage: 'Complete!',
+        stage: t('export.progress.complete'),
         isComplete: true
       });
       
-      showSuccess('Export Complete', 'Your images have been downloaded successfully!');
+      showSuccess(t('export.success.exportComplete'), t('export.success.downloadSuccess'));
       
     } catch (error) {
-      showError('Export Error', error instanceof Error ? error.message : 'Failed to export images');
+      showError(t('export.errors.exportError'), error instanceof Error ? error.message : t('export.errors.exportFailed'));
     } finally {
       setIsExporting(false);
       // Clear progress after a delay
@@ -483,7 +486,7 @@ export function BatchImageGenerator() {
     return (
       <Card>
         <CardContent className="text-center py-8">
-          <p>No content available. Please go back and create your story content.</p>
+          <p>{t('export.noContent')}</p>
         </CardContent>
       </Card>
     );
@@ -494,10 +497,9 @@ export function BatchImageGenerator() {
       {/* Header */}
       <Card>
         <CardHeader>
-          <CardTitle>Preview & Export</CardTitle>
+          <CardTitle>{t('export.title')}</CardTitle>
           <CardDescription>
-            Generate images for all {sections.length} page{sections.length !== 1 ? 's' : ''} with 4 different background styles.
-            Each page will create 4 different versions (Stage 1-4).
+            {t('export.description', { count: sections.length, plural: sections.length !== 1 ? 's' : '' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -510,14 +512,14 @@ export function BatchImageGenerator() {
                 title="Toggle background preview in image generation"
               >
                 {backgroundPreview ? <ImageOff className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
-                {backgroundPreview ? 'Hide Backgrounds' : 'Show Backgrounds'}
+                {backgroundPreview ? t('export.hideBackgrounds') : t('export.showBackgrounds')}
               </button>
             </div>
             
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                <p>Total pages: <strong>{sections.length}</strong></p>
-                <p>Total images to generate: <strong>{sections.length * DEFAULT_BACKGROUNDS.length}</strong></p>
+                <p>{t('export.totalPages', { count: sections.length })}</p>
+                <p>{t('export.totalImages', { count: sections.length * DEFAULT_BACKGROUNDS.length })}</p>
               </div>
               <div className="flex items-center space-x-2">
                 {sections.map((section, index) => (
@@ -541,17 +543,17 @@ export function BatchImageGenerator() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Eye className="w-5 h-5 mr-2" />
-            Preview Gallery
+            {t('export.previewGallery')}
           </CardTitle>
           <CardDescription>
-            Preview all pages with different background styles. Click on any image to zoom in or download individually.
+            {t('export.previewDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isGeneratingPreviews ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin mr-2" />
-              <span>Generating previews...</span>
+              <span>{t('export.generatingPreviews')}</span>
             </div>
           ) : (
             <div className="space-y-6">
@@ -641,10 +643,10 @@ export function BatchImageGenerator() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileArchive className="w-5 h-5 mr-2" />
-            Generate & Download ZIP
+            {t('export.generateDownloadZip')}
           </CardTitle>
           <CardDescription>
-            Generate all images and download them as a ZIP file organized by background stages.
+            {t('export.zipDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -659,7 +661,7 @@ export function BatchImageGenerator() {
             ) : (
               <Download className="w-4 h-4 mr-2" />
             )}
-            Generate & Download All Images
+            {t('export.generateDownloadAll')}
           </Button>
           
           {/* Export Progress */}
@@ -680,7 +682,7 @@ export function BatchImageGenerator() {
               {exportProgress.isComplete && (
                 <div className="text-green-600 text-sm bg-green-50 p-3 rounded-md flex items-center">
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Export completed successfully!
+                  {t('export.exportCompleted')}
                 </div>
               )}
             </div>
@@ -696,7 +698,7 @@ export function BatchImageGenerator() {
           onClick={handleBack}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Write Story
+          {t('export.backToWriteStory')}
         </Button>
         
         <Button
@@ -704,7 +706,7 @@ export function BatchImageGenerator() {
           variant="outline"
           onClick={() => window.location.reload()}
         >
-          Start New Story
+          {t('export.startNewStory')}
         </Button>
       </div>
       
@@ -745,12 +747,12 @@ export function BatchImageGenerator() {
                     className="w-full"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Download This Image
+                    {t('export.downloadThisImage')}
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-64">
-                  <div className="text-gray-500">Image not available</div>
+                  <div className="text-gray-500">{t('export.imageNotAvailable')}</div>
                 </div>
               );
             })()} 

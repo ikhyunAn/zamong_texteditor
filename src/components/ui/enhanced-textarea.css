@@ -4,7 +4,8 @@
   border: none;
   outline: none;
   background: transparent;
-  font-family: inherit;
+  /* Use CSS font classes instead of inherit for consistency */
+  font-family: 'CustomFontTTF', '학교안심', 'HakgyoansimBareonbatangB', Arial, sans-serif;
   font-size: inherit;
   line-height: inherit;
   

@@ -1,6 +1,6 @@
 import { fabric } from 'fabric';
 import { TextStyle, EditorSettings } from '@/types';
-import { loadAvailableFonts, loadCustomFonts } from './font-utils';
+import { loadAvailableFonts, loadCustomFonts, getFallbackFont } from './font-utils';
 
 /**
  * Safely render canvas only if canvas is truthy and has a valid context
@@ -188,11 +188,33 @@ export function addTextToCanvas(
     
     // Use editorSettings for fontSize and fontFamily if available, otherwise fall back to textStyle
     const fontSize = editorSettings?.fontSize || textStyle.fontSize;
-    const fontFamily = editorSettings?.fontFamily || textStyle.fontFamily;
+    let fontFamily = editorSettings?.fontFamily || textStyle.fontFamily;
     const lineHeight = editorSettings?.lineHeight || 1.5;
+    
+    // Ensure font consistency - always use CustomFontTTF for Korean content
+    if (!fontFamily || fontFamily === 'Arial' || fontFamily === 'sans-serif') {
+      fontFamily = 'CustomFontTTF';
+    }
+    
+    // Get fallback font to ensure it's available
+    const actualFontFamily = getFallbackFont(fontFamily);
     
     // Get vertical alignment from editorSettings or textStyle
     const verticalAlignment = editorSettings?.verticalAlignment || textStyle.verticalAlignment || 'middle';
+    
+    // Calculate horizontal position first to avoid reference errors
+    const finalAlignment = config.globalAlignment || textStyle.alignment;
+    
+    // Log font information for debugging
+    console.log(`[Canvas] Using font: ${actualFontFamily} (requested: ${fontFamily})`);
+    console.log(`[Canvas] Text preview: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}"`);
+    console.log(`[Canvas] Font settings - Size: ${fontSize}px, LineHeight: ${lineHeight}, Alignment: ${finalAlignment}`);
+    
+    // Verify font is loaded
+    if (typeof document !== 'undefined') {
+      const isLoaded = document.fonts.check(`16px "${actualFontFamily}"`);
+      console.log(`[Canvas] Font availability check for "${actualFontFamily}": ${isLoaded ? 'Available' : 'Not available - using fallback'}`);
+    }
     
     // Calculate textbox width (80% of canvas width with some padding)
     const textboxWidth = canvasWidth * 0.8;
@@ -211,8 +233,7 @@ export function addTextToCanvas(
       calculatedTop = (textStyle.position.y / 100) * canvasHeight;
     }
     
-    // Calculate horizontal position
-    const finalAlignment = config.globalAlignment || textStyle.alignment;
+    // Calculate horizontal position  
     let calculatedLeft = (textStyle.position.x / 100) * canvasWidth;
     
     // Adjust horizontal position for center alignment
