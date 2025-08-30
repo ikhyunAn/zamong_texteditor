@@ -19,6 +19,7 @@ interface ExportTask {
   dimensions: { width: number; height: number };
   pageNumber: number;
   globalAlignment?: 'left' | 'center' | 'right';
+  title?: string; // Add title property for first page rendering
 }
 
 interface ExportResult {
@@ -59,20 +60,51 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
     const lineHeight = task.editorSettings?.lineHeight || 1.5;
     const padding = 80;
 
+    let startY = padding + fontSize;
+    
+    // Add title on the first page if present
+    if (task.pageNumber === 1 && task.title) {
+      const titleFontSize = Math.max(fontSize + 6, 28);
+      const titleLineHeight = 1.2;
+      
+      // Configure title styling
+      ctx.font = `bold ${titleFontSize}px ${fontFamily}`;
+      ctx.fillStyle = task.textStyle.color || '#000000';
+      ctx.textAlign = 'center'; // Always center-align the title
+      
+      // Draw title at center of canvas width
+      const titleX = task.dimensions.width / 2;
+      const titleY = task.dimensions.height * 0.05 + titleFontSize; // Start near top
+      
+      ctx.fillText(task.title, titleX, titleY);
+      
+      // Adjust content start position to be below title
+      startY = titleY + (titleFontSize * titleLineHeight) + 20; // Add spacing after title
+    }
+
+    // Configure text style for content
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = task.textStyle.color || '#000000';
     ctx.textAlign = task.globalAlignment || task.textStyle.alignment || 'left';
 
-    // Word wrap and draw text
+    // Word wrap and draw content text
     const maxWidth = task.dimensions.width - (padding * 2);
     const lines = wrapText(ctx, task.sectionContent, maxWidth);
     
     // Calculate actual line spacing using fontSize * lineHeight
     const actualLineSpacing = fontSize * lineHeight;
-    let y = padding + fontSize;
+    let y = startY;
     
     lines.forEach(line => {
-      ctx.fillText(line, padding, y);
+      // Calculate x position based on alignment
+      let x = padding;
+      if (ctx.textAlign === 'center') {
+        x = task.dimensions.width / 2;
+      } else if (ctx.textAlign === 'right') {
+        x = task.dimensions.width - padding;
+      }
+      
+      ctx.fillText(line, x, y);
       y += actualLineSpacing;
     });
 

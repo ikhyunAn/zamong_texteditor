@@ -135,17 +135,13 @@ export function BatchImageGenerator() {
             fontSize: 60,
             fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
             fill: textStyle.color || '#000000',
-            textAlign: editorSettings.globalTextAlignment || 'left',
+            textAlign: 'center', // Always center-align the title regardless of body text alignment
             selectable: false,
             evented: false
           });
           
-          // Center the title horizontally based on alignment
-          if (editorSettings.globalTextAlignment === 'center') {
-            titleText.set({ left: EXPORT_DIMENSIONS.width / 2 - (titleText.width || 0) / 2 });
-          } else if (editorSettings.globalTextAlignment === 'right') {
-            titleText.set({ left: EXPORT_DIMENSIONS.width - MARGIN - (titleText.width || 0) });
-          }
+          // Always center the title horizontally
+          titleText.set({ left: EXPORT_DIMENSIONS.width / 2 - (titleText.width || 0) / 2 });
           
           canvas.add(titleText);
           

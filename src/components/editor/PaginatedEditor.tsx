@@ -1005,7 +1005,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
                         fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
                         fontSize: '60px',
                         color: '#333',
-                        textAlign: editorSettings.textAlignment,
+                        textAlign: 'center', // Always center-align the title in preview mode
                         lineHeight: '1.5',
                         pointerEvents: 'none',
                         userSelect: 'none'
