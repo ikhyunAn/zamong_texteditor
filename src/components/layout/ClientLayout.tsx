@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLanguageStore } from '@/store/useLanguageStore'
 import { FontPreloader } from '@/components/FontPreloader'
+import { initializeFontDebugging } from '@/lib/font-debug-enhanced'
 import '@/lib/i18n' // Initialize i18n
 
 interface ClientLayoutProps {
@@ -15,9 +16,14 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   const { language, setLanguage } = useLanguageStore()
   const [hasHydrated, setHasHydrated] = useState(false)
 
-  // Track hydration state
+  // Track hydration state and initialize font debugging
   useEffect(() => {
     setHasHydrated(true)
+    
+    // Initialize font debugging for cloud deployment troubleshooting
+    if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_FONT_DEBUG) {
+      initializeFontDebugging();
+    }
   }, [])
 
   // Auto-detect browser language after hydration (only if no stored preference)

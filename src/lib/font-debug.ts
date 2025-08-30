@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * Font debugging utilities for troubleshooting font loading issues
  */

@@ -65,7 +65,7 @@ export const AVAILABLE_FONTS = [
 ];
 
 // Helper function to get recommended font based on language
-export function getRecommendedFontForLanguage(_language: 'ko' | 'en'): string {
+export function getRecommendedFontForLanguage(): string {
   // Since users write in Korean regardless of UI language mode,
   // use Regular weight for body text
   return 'HakgyoansimBareonbatangR';

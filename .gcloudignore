@@ -1,0 +1,61 @@
+# Ignore development files
+.git
+.gitignore
+README.md
+.dockerignore
+Dockerfile
+.gcloudignore
+
+# Ignore node_modules but keep fonts
+node_modules
+npm-debug.log
+
+# Ignore development and test files
+src/**/*.test.ts
+src/**/*.test.tsx
+src/**/*.spec.ts
+src/**/*.spec.tsx
+**/__tests__/**
+**/*.test.*
+**/*.spec.*
+
+# Keep public directory with fonts - DO NOT IGNORE
+!public/
+!public/fonts/
+!public/fonts/*.ttf
+!public/fonts/*.otf
+!public/fonts/*.woff
+!public/fonts/*.woff2
+
+# Ignore cache and build artifacts (except .next which we need)
+.next/cache
+.next/trace
+.next/server/chunks
+.next/static/chunks
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore coverage reports
+coverage/
+.nyc_output/

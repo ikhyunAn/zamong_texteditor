@@ -7,6 +7,8 @@ import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
 import type { StorySection } from '@/types';
 import { getTitleFont, getAuthorFont } from '@/lib/constants';
+import { ensureFontsLoaded } from '@/lib/canvas-utils';
+import { initializeFonts, checkFontAvailability } from '@/lib/server-font-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,7 +92,16 @@ export function BatchImageGenerator() {
     pageNumber: number,
     backgroundId?: string
   ): Promise<string> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Ensure fonts are loaded before creating canvas
+        console.log('Loading fonts before canvas generation...');
+        await ensureFontsLoaded();
+        console.log('Fonts loaded successfully, proceeding with canvas generation');
+      } catch (fontError) {
+        console.warn('Font loading failed, proceeding with fallback fonts:', fontError);
+        // Continue with canvas generation even if fonts fail to load
+      }
       const canvasElement = document.createElement('canvas');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const canvas = new (fabric as any).Canvas(canvasElement, {

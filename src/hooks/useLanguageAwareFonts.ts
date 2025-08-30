@@ -16,13 +16,13 @@ export function useLanguageAwareFonts(options?: {
   const { autoSwitch = false, suggestOnly = false } = options || {};
   
   // Get recommended font for current language
-  const recommendedFont = getRecommendedFontForLanguage(language);
+  const recommendedFont = getRecommendedFontForLanguage();
   
   // Auto-switch font when language changes (if enabled)
   useEffect(() => {
     if (autoSwitch && !suggestOnly) {
       const currentFont = editorSettings.fontFamily;
-      const recommended = getRecommendedFontForLanguage(language);
+      const recommended = getRecommendedFontForLanguage();
       
       // Only switch if the current font is different from recommended
       if (currentFont !== recommended) {

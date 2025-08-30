@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { enableFontDebugging, logFontDebugInfo } from '@/lib/font-debug';
+import { initializeFonts, checkFontAvailability } from '@/lib/server-font-utils';
+import { quickFontCheck, logFontSystemInfo } from '@/lib/font-debug-enhanced';
 
 interface FontPreloaderProps {
   children: React.ReactNode;
@@ -13,37 +15,57 @@ export function FontPreloader({ children }: FontPreloaderProps) {
   useEffect(() => {
     const preloadFonts = async () => {
       try {
-        // Wait for CSS fonts to be loaded
-        await document.fonts.ready;
+        console.log('🚀 Starting enhanced font preloading for cloud deployment...');
         
-        // Force load all our custom fonts by checking if they're available
-        const fontsToCheck = [
-          'HakgyoansimBareonbatangB', // Bold for titles
-          'HakgyoansimBareonbatangR', // Regular for body text
-          'CustomFont',               // 나눔손글씨 for author names
-          'CustomFontTTF'             // Legacy alias
-        ];
+        // Method 1: Try enhanced cross-environment font loading
+        try {
+          await initializeFonts();
+          console.log('✅ Enhanced font loading successful');
+        } catch (enhancedError) {
+          console.warn('Enhanced font loading failed, trying CSS method:', enhancedError);
+          
+          // Method 2: Fallback to CSS font loading
+          await document.fonts.ready;
+          
+          const fontsToCheck = [
+            'HakgyoansimBareonbatangB', // Bold for titles
+            'HakgyoansimBareonbatangR', // Regular for body text
+            'CustomFont',               // 나눔손글씨 for author names
+            'CustomFontTTF'             // Legacy alias
+          ];
 
-        const checkPromises = fontsToCheck.map(fontFamily => 
-          document.fonts.load(`16px "${fontFamily}"`)
-        );
+          const checkPromises = fontsToCheck.map(fontFamily => 
+            document.fonts.load(`16px "${fontFamily}"`).catch(err => {
+              console.warn(`Failed to load font ${fontFamily}:`, err);
+              return null; // Continue with other fonts
+            })
+          );
 
-        // Wait for all fonts to be loaded
-        await Promise.allSettled(checkPromises);
-
-        console.log('CSS fonts preloaded successfully');
+          await Promise.allSettled(checkPromises);
+          console.log('CSS fonts preloaded successfully');
+        }
         
-        // Enable font debugging in development
-        if (process.env.NODE_ENV === 'development') {
+        // Check and log font availability status
+        const fontStatus = checkFontAvailability();
+        const quickStatus = quickFontCheck();
+        
+        console.log('📊 Font availability after preload:', fontStatus);
+        console.log('⚡ Quick font check results:', quickStatus);
+        
+        // Enable enhanced debugging in development or when debug flag is set
+        if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_ENABLE_FONT_DEBUG) {
           enableFontDebugging();
-          // Log font status after a brief delay to ensure fonts are fully loaded
-          setTimeout(() => logFontDebugInfo(true), 500);
+          // Run comprehensive font analysis
+          setTimeout(() => {
+            logFontDebugInfo(true);
+            logFontSystemInfo();
+          }, 500);
         }
         
         setFontsPreloaded(true);
       } catch (error) {
-        console.warn('Font preloading failed, continuing with fallbacks:', error);
-        setFontsPreloaded(true);
+        console.error('❌ All font preloading methods failed:', error);
+        setFontsPreloaded(true); // Don't block the UI
       }
     };
 

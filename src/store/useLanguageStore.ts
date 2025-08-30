@@ -17,41 +17,41 @@ interface LanguageStore extends LanguageState, LanguageActions {}
 const defaultLanguage: Language = 'en';
 
 // Helper function to detect browser language (client-side only)
-const detectBrowserLanguage = (): Language => {
-  if (typeof window === 'undefined') return defaultLanguage;
+// const detectBrowserLanguage = (): Language => {
+//   if (typeof window === 'undefined') return defaultLanguage;
   
-  const browserLang = navigator.language.toLowerCase();
+//   const browserLang = navigator.language.toLowerCase();
   
-  // Check if browser language is Korean
-  if (browserLang.startsWith('ko')) {
-    return 'ko';
-  }
+//   // Check if browser language is Korean
+//   if (browserLang.startsWith('ko')) {
+//     return 'ko';
+//   }
   
-  // Default to English for all other languages
-  return 'en';
-};
+//   // Default to English for all other languages
+//   return 'en';
+// };
 
 // Helper function to get initial language (server-safe)
-const getInitialLanguage = (): Language => {
-  // Always return default language on server to avoid hydration mismatch
-  if (typeof window === 'undefined') return defaultLanguage;
+// const getInitialLanguage = (): Language => {
+//   // Always return default language on server to avoid hydration mismatch
+//   if (typeof window === 'undefined') return defaultLanguage;
   
-  // Try to get language from localStorage first
-  try {
-    const stored = localStorage.getItem('language-storage');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.state && (parsed.state.language === 'en' || parsed.state.language === 'ko')) {
-        return parsed.state.language;
-      }
-    }
-  } catch (error) {
-    console.warn('Failed to parse stored language preference:', error);
-  }
+//   // Try to get language from localStorage first
+//   try {
+//     const stored = localStorage.getItem('language-storage');
+//     if (stored) {
+//       const parsed = JSON.parse(stored);
+//       if (parsed.state && (parsed.state.language === 'en' || parsed.state.language === 'ko')) {
+//         return parsed.state.language;
+//       }
+//     }
+//   } catch (error) {
+//     console.warn('Failed to parse stored language preference:', error);
+//   }
   
-  // Fallback to browser language detection
-  return detectBrowserLanguage();
-};
+//   // Fallback to browser language detection
+//   return detectBrowserLanguage();
+// };
 
 export const useLanguageStore = create<LanguageStore>()(
   persist(

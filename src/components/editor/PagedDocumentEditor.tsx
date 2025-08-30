@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
-import { useLanguageStore } from '@/store/useLanguageStore';
 import { usePageManager } from '@/hooks/usePageManager';
-import { AVAILABLE_FONTS, getTitleFont } from '@/lib/constants';
+import { AVAILABLE_FONTS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import EnhancedTextarea, { EnhancedTextareaRef } from '@/components/ui/enhanced-textarea';
@@ -123,7 +122,6 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     setTextAlignment,
     setFontFamily
   } = useStoryStore();
-  const { language } = useLanguageStore();
   
   const {
     getPageInfo,
