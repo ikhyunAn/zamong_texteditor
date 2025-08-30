@@ -65,13 +65,17 @@ async function generateImageWithBackground(
       canvas.add(img);
       canvas.sendToBack(img);
 
+      // Store title element for dynamic positioning
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let titleElement: any = null;
+      
       // Add story title to the first image
       if (pageNumber === 1 && title) {
         const titleFontSize = Math.max((editorSettings?.fontSize || textStyle.fontSize) + 6, 28);
         const titleLineHeight = editorSettings?.lineHeight || 1.2;
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const titleText = new (fabric as any).Textbox(title, {
+        titleElement = new (fabric as any).Textbox(title, {
           left: EXPORT_DIMENSIONS.width * 0.1,
           top: EXPORT_DIMENSIONS.height * 0.03,
           width: EXPORT_DIMENSIONS.width * 0.8,
@@ -81,15 +85,16 @@ async function generateImageWithBackground(
           fill: textStyle.color,
           textAlign: 'center', // Always center the title for better presentation
           lineHeight: titleLineHeight,
+          splitByGrapheme: true, // Enable proper text wrapping for Korean/multi-byte characters
           selectable: false,
           evented: false
         });
 
-        canvas.add(titleText);
+        canvas.add(titleElement);
       }
 
-      // Add text content - adjust top position if title is present
-      const contentTopPosition = (pageNumber === 1 && title) ? EXPORT_DIMENSIONS.height * 0.15 : EXPORT_DIMENSIONS.height * 0.1;
+      // Use initial position, will be updated after title renders
+      const contentTopPosition = EXPORT_DIMENSIONS.height * 0.1;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = new (fabric as any).Textbox(page.content, {
@@ -116,27 +121,47 @@ async function generateImageWithBackground(
       });
 
       canvas.add(text);
-      canvas.renderAll();
-
-      // Convert canvas to data URL then to blob
-      const dataURL = canvas.toDataURL({
-        format: 'png',
-        quality: 1,
-        multiplier: 1
-      });
       
-      // Convert data URL to blob
-      fetch(dataURL)
-        .then(res => res.blob())
-        .then(blob => {
-          // Clean up
-          canvas.dispose();
-          resolve(blob);
-        })
-        .catch(error => {
-          canvas.dispose();
-          reject(new Error('Failed to export canvas to blob: ' + error.message));
+      // Wait for Fabric.js to calculate dimensions before final positioning
+      setTimeout(() => {
+        // Calculate actual title height and reposition body text accordingly
+        if (pageNumber === 1 && title && titleElement) {
+          // Get the actual height of the rendered title
+          const actualTitleHeight = (titleElement.calcTextHeight && titleElement.calcTextHeight()) || titleElement.height || 48;
+          const titleSpacing = 20; // Space between title and body text
+          
+          // Calculate where body text should start (after title + spacing)
+          const titleTop = EXPORT_DIMENSIONS.height * 0.03;
+          const bodyTextTop = titleTop + actualTitleHeight + titleSpacing;
+          
+          // Reposition the body text to start after the title
+          text.set({ top: bodyTextTop });
+          
+          console.log(`[Export Utils Dynamic] Title height: ${actualTitleHeight}px, Body text starts at: ${bodyTextTop}px`);
+        }
+        
+        canvas.renderAll();
+
+        // Convert canvas to data URL then to blob
+        const dataURL = canvas.toDataURL({
+          format: 'png',
+          quality: 1,
+          multiplier: 1
         });
+        
+        // Convert data URL to blob
+        fetch(dataURL)
+          .then(res => res.blob())
+          .then(blob => {
+            // Clean up
+            canvas.dispose();
+            resolve(blob);
+          })
+          .catch(error => {
+            canvas.dispose();
+            reject(new Error('Failed to export canvas to blob: ' + error.message));
+          });
+      }, 100); // Wait for Fabric.js to calculate title dimensions
     }, { crossOrigin: 'anonymous' });
   });
 }

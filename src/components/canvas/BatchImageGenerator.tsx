@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/useToast';
 import type { StorySection } from '@/types';
 import { getTitleFont, getAuthorFont } from '@/lib/constants';
 import { ensureFontsLoaded } from '@/lib/canvas-utils';
-import { initializeFonts, checkFontAvailability } from '@/lib/server-font-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,30 +122,32 @@ export function BatchImageGenerator() {
         
         // Check if this is the first page (pageNumber === 1)
         const isFirstPage = pageNumber === 1;
-        let topOffset = MARGIN;
+        const topOffset = MARGIN;
+        
+        // Store reference to title element for later positioning calculations
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let titleElement: any = null;
         
         // Add title on the first page
         if (isFirstPage && authorInfo.title) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const titleText = new (fabric as any).Text(authorInfo.title, {
+          titleElement = new (fabric as any).Textbox(authorInfo.title, {
             left: contentLeft,
             top: topOffset,
-            width: contentWidth,
+            width: contentWidth, // This enables text wrapping within the specified width
             fontSize: 60,
             fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
             fill: textStyle.color || '#000000',
             textAlign: 'center', // Always center-align the title regardless of body text alignment
+            lineHeight: 1.5, // Add line height for multi-line titles
+            splitByGrapheme: true, // Enable proper text wrapping for Korean/multi-byte characters
             selectable: false,
             evented: false
           });
           
-          // Always center the title horizontally
-          titleText.set({ left: EXPORT_DIMENSIONS.width / 2 - (titleText.width || 0) / 2 });
+          canvas.add(titleElement);
           
-          canvas.add(titleText);
-          
-          // Add spacing after title (using line height of title)
-          topOffset += 60 * 1.5 + 20; // title height * line height + extra spacing
+          // Don't calculate topOffset here - wait for Fabric.js to calculate actual title dimensions
         }
         
         // Process text content for canvas rendering
@@ -201,16 +202,29 @@ export function BatchImageGenerator() {
         
         // Wait for Fabric.js to calculate dimensions in the next tick
         setTimeout(() => {
-          // Calculate total content height including title if on first page
+          // Calculate actual title height and reposition body text accordingly
+          if (isFirstPage && authorInfo.title && titleElement) {
+            // Get the actual height of the rendered title
+            const actualTitleHeight = (titleElement.calcTextHeight && titleElement.calcTextHeight()) || titleElement.height || (60 * 1.5);
+            const titleSpacing = 20; // Space between title and body text
+            
+            // Calculate where body text should start (after title + spacing)
+            const bodyTextTop = MARGIN + actualTitleHeight + titleSpacing;
+            
+            // Reposition the body text to start after the title
+            text.set({ top: bodyTextTop });
+            
+            console.log(`[Dynamic Positioning] Title height: ${actualTitleHeight}px, Body text starts at: ${bodyTextTop}px`);
+          }
+          
+          // Calculate total content height for vertical alignment
           const textHeight = text.calcTextHeight() || text.height || 0;
           let totalContentHeight = textHeight;
-          let contentStartTop = topOffset;
+          const contentStartTop = MARGIN;
           
-          if (isFirstPage && authorInfo.title) {
-            // Include title height in total content calculation
-            const titleHeight = 60 * 1.5 + 20; // title font size * line height + spacing
-            totalContentHeight = textHeight + titleHeight;
-            contentStartTop = MARGIN; // Start from the margin
+          if (isFirstPage && authorInfo.title && titleElement) {
+            const actualTitleHeight = (titleElement.calcTextHeight && titleElement.calcTextHeight()) || titleElement.height || (60 * 1.5);
+            totalContentHeight = textHeight + actualTitleHeight + 20; // title + spacing + body
           }
           
           // Use editorSettings.verticalAlignment as fallback if textStyle doesn't have it

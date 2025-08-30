@@ -65,21 +65,29 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
     // Add title on the first page if present
     if (task.pageNumber === 1 && task.title) {
       const titleFontSize = Math.max(fontSize + 6, 28);
-      const titleLineHeight = 1.2;
+      const titleLineHeight = 1.5; // Use consistent line height
       
       // Configure title styling
       ctx.font = `bold ${titleFontSize}px ${fontFamily}`;
       ctx.fillStyle = task.textStyle.color || '#000000';
       ctx.textAlign = 'center'; // Always center-align the title
       
-      // Draw title at center of canvas width
+      // Wrap title text to fit within canvas width (with padding)
+      const titleMaxWidth = task.dimensions.width - (padding * 2);
+      const titleLines = wrapText(ctx, task.title, titleMaxWidth);
+      
+      // Draw each line of the title centered
       const titleX = task.dimensions.width / 2;
-      const titleY = task.dimensions.height * 0.05 + titleFontSize; // Start near top
+      // eslint-disable-next-line prefer-const
+      let titleY = task.dimensions.height * 0.05 + titleFontSize; // Start near top
       
-      ctx.fillText(task.title, titleX, titleY);
+      titleLines.forEach((line, index) => {
+        ctx.fillText(line, titleX, titleY + (index * titleFontSize * titleLineHeight));
+      });
       
-      // Adjust content start position to be below title
-      startY = titleY + (titleFontSize * titleLineHeight) + 20; // Add spacing after title
+      // Adjust content start position to be below all title lines
+      const totalTitleHeight = titleLines.length * titleFontSize * titleLineHeight;
+      startY = titleY + totalTitleHeight + 20; // Add spacing after title
     }
 
     // Configure text style for content
