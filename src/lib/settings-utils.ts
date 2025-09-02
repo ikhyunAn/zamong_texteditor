@@ -11,7 +11,7 @@ const EDITOR_SETTINGS_KEY = 'zamong-editor-settings';
 } {ate
  */
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
-  fontFamily: 'CustomFontTTF',
+  fontFamily: 'KoPubWorldBatangLight',
   fontSize: 18,
   lineHeight: 1.5,
   textAlignment: 'left',

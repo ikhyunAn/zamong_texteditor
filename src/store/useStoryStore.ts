@@ -64,8 +64,8 @@ const initialState: StoryState = {
   currentPageIndex: 0,
   editorSettings: {
     fontFamily: 'KoPubWorldBatangLight', // Primary font for all text
-    fontSize: 18,
-    lineHeight: 1.5,
+    fontSize: 26,
+    lineHeight: 1.8,
     textAlignment: 'left',
     globalTextAlignment: 'left', // Default to left for backward compatibility
     verticalAlignment: 'top'
