@@ -27,6 +27,12 @@ src/**/*.spec.tsx
 !public/fonts/*.woff
 !public/fonts/*.woff2
 
+# Explicitly include Korean font files (in case filename encoding causes issues)
+!public/fonts/작가폰트_나눔손글씨*
+!public/fonts/HakgyoansimBareonbatangB.ttf
+!public/fonts/HakgyoansimBareonbatangR.ttf
+!public/fonts/KoPubWorld*
+
 # Ignore cache and build artifacts (except .next which we need)
 .next/cache
 .next/trace

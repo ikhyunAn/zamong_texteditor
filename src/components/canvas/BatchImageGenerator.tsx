@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fabric } from 'fabric';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
 import type { StorySection } from '@/types';
-import { getTitleFont, getAuthorFont } from '@/lib/constants';
 import { ensureFontsLoaded } from '@/lib/canvas-utils';
+import { verifyFontsForCanvas } from '@/lib/cloud-font-loader';
+import { verifyCanvasFonts, getBestCanvasFont, loadKoreanSystemFonts } from '@/lib/canvas-font-fallback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,12 +58,16 @@ export function BatchImageGenerator() {
   } = useStoryStore();
   const { showError, showSuccess } = useToast();
   
+  // Track if we've already synced to prevent infinite loops
+  const hasSyncedRef = useRef(false);
+  
   // Ensure sections are synced with latest editor settings when component mounts
   useEffect(() => {
-    if (sections && sections.length > 0) {
+    if (sections && sections.length > 0 && !hasSyncedRef.current) {
       syncEditorSettingsToSections();
+      hasSyncedRef.current = true;
     }
-  }, []); // Only run on mount
+  }, [sections, syncEditorSettingsToSections]);
   
   // State for preview system
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
@@ -82,7 +87,7 @@ export function BatchImageGenerator() {
         URL.revokeObjectURL(preview.imageUrl);
       });
     };
-  }, []);
+  }, [previewImages]);
   
   // Function to generate image with background
   const generateImageWithBackground = useCallback(async (
@@ -93,21 +98,45 @@ export function BatchImageGenerator() {
   ): Promise<string> => {
     return new Promise(async (resolve, reject) => {
       try {
-        // Ensure fonts are loaded before creating canvas
-        console.log('Loading fonts before canvas generation...');
-        await ensureFontsLoaded();
-        console.log('Fonts loaded successfully, proceeding with canvas generation');
+        // Multi-layer font verification for maximum reliability
+        console.log('[Canvas] Multi-layer font verification for cloud deployment...');
+        
+        // Layer 1: Load Korean system fonts as base fallbacks
+        loadKoreanSystemFonts();
+        
+        // Layer 2: Try cloud font loading
+        try {
+          await ensureFontsLoaded();
+          const cloudResult = await verifyFontsForCanvas();
+          console.log('[Canvas] Cloud font verification:', cloudResult.ready);
+        } catch (cloudError) {
+          console.warn('[Canvas] Cloud font verification failed:', cloudError);
+        }
+        
+        // Layer 3: Final canvas-specific font verification with fallbacks
+        const { fonts, report } = await verifyCanvasFonts();
+        console.log('[Canvas] Final font verification:', report);
+        
+        // Store verified fonts for use in rendering
+        (window as unknown as { _canvasFonts?: unknown })._canvasFonts = fonts;
+        
+        console.log('[Canvas] All font verification layers complete, proceeding with canvas generation');
       } catch (fontError) {
-        console.warn('Font loading failed, proceeding with fallback fonts:', fontError);
-        // Continue with canvas generation even if fonts fail to load
+        console.warn('[Canvas] Font verification failed, using emergency fallbacks:', fontError);
+        // Set emergency fallback fonts
+        (window as unknown as { _canvasFonts?: unknown })._canvasFonts = {
+          title: 'Malgun Gothic, Apple SD Gothic Neo, sans-serif',
+          body: 'Malgun Gothic, Apple SD Gothic Neo, sans-serif',
+          author: 'Malgun Gothic, Apple SD Gothic Neo, cursive'
+        };
       }
       const canvasElement = document.createElement('canvas');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const canvas = new (fabric as any).Canvas(canvasElement, {
+      // Type assertion for fabric.js Canvas constructor
+      const canvas = new (fabric as unknown as { Canvas: new (el: HTMLCanvasElement, options?: unknown) => unknown }).Canvas(canvasElement, {
         width: EXPORT_DIMENSIONS.width,
         height: EXPORT_DIMENSIONS.height,
         backgroundColor: '#ffffff'
-      });
+      }) as unknown;
 
       const addTextAndRender = () => {
         // Use the section's textStyle which has been synced with editorSettings
@@ -125,18 +154,16 @@ export function BatchImageGenerator() {
         const topOffset = MARGIN;
         
         // Store reference to title element for later positioning calculations
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let titleElement: any = null;
+        let titleElement: unknown = null;
         
         // Add title on the first page
         if (isFirstPage && authorInfo.title) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          titleElement = new (fabric as any).Textbox(authorInfo.title, {
+          titleElement = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(authorInfo.title, {
             left: contentLeft,
             top: topOffset,
             width: contentWidth, // This enables text wrapping within the specified width
             fontSize: 60,
-            fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
+            fontFamily: ((window as unknown as { _canvasFonts?: { title?: string } })._canvasFonts?.title) || getBestCanvasFont('title'), // Use verified canvas font
             fill: textStyle.color || '#000000',
             textAlign: 'center', // Always center-align the title regardless of body text alignment
             lineHeight: 1.5, // Add line height for multi-line titles
@@ -145,7 +172,7 @@ export function BatchImageGenerator() {
             evented: false
           });
           
-          canvas.add(titleElement);
+          (canvas as unknown as { add: (obj: unknown) => void }).add(titleElement);
           
           // Don't calculate topOffset here - wait for Fabric.js to calculate actual title dimensions
         }
@@ -161,8 +188,7 @@ export function BatchImageGenerator() {
           textContent = textContent.replace(/\n{2,}/g, '\n');
         }
         
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const text = new (fabric as any).Textbox(textContent, {
+        const text = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(textContent, {
           left: contentLeft,
           top: topOffset,
           width: contentWidth,
@@ -177,17 +203,16 @@ export function BatchImageGenerator() {
         });
 
         // Add text to canvas first so Fabric.js can calculate dimensions
-        canvas.add(text);
+        (canvas as unknown as { add: (obj: unknown) => void }).add(text);
         
         // Add writer's name for stage 4, last page only
         const isLastPage = pageNumber === sections.length;
         if (isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const writerName = new (fabric as any).Text(authorInfo.name, {
+          const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
             fontSize: 40,
-            fontFamily: getAuthorFont(), // Use 나눔손글씨 for author name
+            fontFamily: ((window as unknown as { _canvasFonts?: { author?: string } })._canvasFonts?.author) || getBestCanvasFont('author'), // Use verified canvas font for author
             fill: '#000000',
             textAlign: 'right',
             selectable: false,
@@ -195,9 +220,9 @@ export function BatchImageGenerator() {
           });
           
           // Measure and position correctly at the right edge
-          canvas.add(writerName);
-          const nameWidth = writerName.width || 0;
-          writerName.set({ left: EXPORT_DIMENSIONS.width - MARGIN - nameWidth });
+          (canvas as unknown as { add: (obj: unknown) => void }).add(writerName);
+          const nameWidth = (writerName as unknown as { width?: number }).width || 0;
+          (writerName as unknown as { set: (props: unknown) => void }).set({ left: EXPORT_DIMENSIONS.width - MARGIN - nameWidth });
         }
         
         // Wait for Fabric.js to calculate dimensions in the next tick
@@ -205,25 +230,28 @@ export function BatchImageGenerator() {
           // Calculate actual title height and reposition body text accordingly
           if (isFirstPage && authorInfo.title && titleElement) {
             // Get the actual height of the rendered title
-            const actualTitleHeight = (titleElement.calcTextHeight && titleElement.calcTextHeight()) || titleElement.height || (60 * 1.5);
+            const titleEl = titleElement as unknown as { calcTextHeight?: () => number; height?: number };
+            const actualTitleHeight = (titleEl.calcTextHeight && titleEl.calcTextHeight()) || titleEl.height || (60 * 1.5);
             const titleSpacing = 20; // Space between title and body text
             
             // Calculate where body text should start (after title + spacing)
             const bodyTextTop = MARGIN + actualTitleHeight + titleSpacing;
             
             // Reposition the body text to start after the title
-            text.set({ top: bodyTextTop });
+            (text as unknown as { set: (props: unknown) => void }).set({ top: bodyTextTop });
             
             console.log(`[Dynamic Positioning] Title height: ${actualTitleHeight}px, Body text starts at: ${bodyTextTop}px`);
           }
           
           // Calculate total content height for vertical alignment
-          const textHeight = text.calcTextHeight() || text.height || 0;
+          const textEl = text as unknown as { calcTextHeight?: () => number; height?: number };
+          const textHeight = (textEl.calcTextHeight && textEl.calcTextHeight()) || textEl.height || 0;
           let totalContentHeight = textHeight;
           const contentStartTop = MARGIN;
           
           if (isFirstPage && authorInfo.title && titleElement) {
-            const actualTitleHeight = (titleElement.calcTextHeight && titleElement.calcTextHeight()) || titleElement.height || (60 * 1.5);
+            const titleEl = titleElement as unknown as { calcTextHeight?: () => number; height?: number };
+            const actualTitleHeight = (titleEl.calcTextHeight && titleEl.calcTextHeight()) || titleEl.height || (60 * 1.5);
             totalContentHeight = textHeight + actualTitleHeight + 20; // title + spacing + body
           }
           
@@ -243,25 +271,24 @@ export function BatchImageGenerator() {
           // Adjust text position
           if (isFirstPage && authorInfo.title && verticalAlign !== 'top') {
             // Reposition both title and text when not top-aligned
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const titleElements = canvas.getObjects().filter((obj: any) => obj.type === 'text');
+            const titleElements = (canvas as unknown as { getObjects: () => unknown[] }).getObjects().filter((obj: unknown) => (obj as unknown as { type?: string }).type === 'text');
             if (titleElements.length > 0) {
-              titleElements[0].set({ top: finalTopPosition });
-              text.set({ top: finalTopPosition + 60 * 1.5 + 20 });
+              (titleElements[0] as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition });
+              (text as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition + 60 * 1.5 + 20 });
             }
           } else if (verticalAlign !== 'top') {
             // Just reposition the text
-            text.set({ top: finalTopPosition });
+            (text as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition });
           }
           // For top alignment, text is already in the correct position
           
           // Re-render canvas after positioning
-          canvas.renderAll();
+          (canvas as unknown as { renderAll: () => void }).renderAll();
           
           // Ensure the export happens after positioning is complete
           setTimeout(() => {
             // Convert canvas to data URL then to blob URL
-            const dataURL = canvas.toDataURL({
+            const dataURL = (canvas as unknown as { toDataURL: (options?: unknown) => string }).toDataURL({
               format: 'png',
               quality: 1,
               multiplier: 1
@@ -272,11 +299,11 @@ export function BatchImageGenerator() {
               .then(res => res.blob())
               .then(blob => {
                 const blobUrl = URL.createObjectURL(blob);
-                canvas.dispose();
+                (canvas as unknown as { dispose: () => void }).dispose();
                 resolve(blobUrl);
               })
               .catch(error => {
-                canvas.dispose();
+                (canvas as unknown as { dispose: () => void }).dispose();
                 reject(new Error('Failed to export canvas: ' + error.message));
               });
           }, 50); // Small delay to ensure rendering is complete
@@ -285,40 +312,71 @@ export function BatchImageGenerator() {
 
       // Only load background image if backgroundPreview is enabled
       if (backgroundPreview) {
-        // Load background image
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fabric.Image.fromURL(backgroundPath, (img: any) => {
-          if (!img) {
-            reject(new Error('Failed to load background image'));
-            return;
+        console.log(`[Canvas] Loading background image: ${backgroundPath}`);
+        
+        try {
+          // First try to fetch the image as a blob
+          const response = await fetch(backgroundPath);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
           }
-
-          // Scale image to fit canvas maintaining aspect ratio
-          const scaleX = EXPORT_DIMENSIONS.width / (img.width || 1);
-          const scaleY = EXPORT_DIMENSIONS.height / (img.height || 1);
-          const scale = Math.max(scaleX, scaleY);
-
-          img.set({
-            scaleX: scale,
-            scaleY: scale,
-            left: (EXPORT_DIMENSIONS.width - (img.width || 0) * scale) / 2,
-            top: (EXPORT_DIMENSIONS.height - (img.height || 0) * scale) / 2,
-            selectable: false,
-            evented: false
-          });
-
-          canvas.add(img);
-          canvas.sendToBack(img);
           
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          console.log(`[Canvas] Created blob URL for background: ${blobUrl}`);
+          
+          // Load background image using the blob URL
+          (fabric as unknown as { Image: { fromURL: (url: string, callback: (img: unknown, isError?: boolean) => void, options?: unknown) => void } }).Image.fromURL(
+            blobUrl,
+            (img: unknown, isError?: boolean) => {
+              // Clean up blob URL after loading
+              URL.revokeObjectURL(blobUrl);
+              
+              if (isError || !img) {
+                console.error(`[Canvas] Failed to load background image from blob: ${backgroundPath}`);
+                console.error('[Canvas] Error details:', isError);
+                // Continue without background
+                addTextAndRender();
+                return;
+              }
+
+              console.log(`[Canvas] Successfully loaded background image: ${backgroundPath}`);
+              const imgObj = img as unknown as { width?: number; height?: number; set: (props: unknown) => void };
+              
+              // Scale image to fit canvas maintaining aspect ratio
+              const scaleX = EXPORT_DIMENSIONS.width / (imgObj.width || 1);
+              const scaleY = EXPORT_DIMENSIONS.height / (imgObj.height || 1);
+              const scale = Math.max(scaleX, scaleY);
+
+              console.log(`[Canvas] Image dimensions: ${imgObj.width}x${imgObj.height}, scale: ${scale}`);
+
+              imgObj.set({
+                scaleX: scale,
+                scaleY: scale,
+                left: (EXPORT_DIMENSIONS.width - (imgObj.width || 0) * scale) / 2,
+                top: (EXPORT_DIMENSIONS.height - (imgObj.height || 0) * scale) / 2,
+                selectable: false,
+                evented: false
+              });
+
+              (canvas as unknown as { add: (obj: unknown) => void; sendToBack: (obj: unknown) => void }).add(img);
+              (canvas as unknown as { add: (obj: unknown) => void; sendToBack: (obj: unknown) => void }).sendToBack(img);
+              
+              addTextAndRender();
+            }
+          );
+        } catch (fetchError) {
+          console.error(`[Canvas] Failed to fetch background image: ${backgroundPath}`, fetchError);
+          // Continue without background
           addTextAndRender();
-        }, { crossOrigin: 'anonymous' });
+        }
       } else {
         // Just add text without background
         addTextAndRender();
       }
 
     });
-  }, [editorSettings, authorInfo, backgroundPreview]);
+  }, [editorSettings, authorInfo, backgroundPreview, sections.length]);
   
   
   // Function to generate preview images for all sections and backgrounds
@@ -365,7 +423,7 @@ export function BatchImageGenerator() {
     } finally {
       setIsGeneratingPreviews(false);
     }
-  }, [sections, showError, generateImageWithBackground, backgroundPreview]);
+  }, [sections, showError, generateImageWithBackground, t]);
   
   // Function to generate and download ZIP file
   const handleGenerateAndDownload = async () => {

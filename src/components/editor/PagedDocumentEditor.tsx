@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStoryStore } from '@/store/useStoryStore';
 import { usePageManager } from '@/hooks/usePageManager';
-import { AVAILABLE_FONTS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import EnhancedTextarea, { EnhancedTextareaRef } from '@/components/ui/enhanced-textarea';
@@ -11,7 +10,6 @@ import {
   ArrowLeft, 
   ArrowRight, 
   AlertCircle, 
-  Type, 
   BookOpen,
   FileText,
   Plus,

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLanguageStore } from '@/store/useLanguageStore'
-import { FontPreloader } from '@/components/FontPreloader'
+import { CloudFontLoader } from '@/components/CloudFontLoader'
+import { FontVerificationPanel } from '@/components/FontVerificationPanel'
 import { initializeFontDebugging } from '@/lib/font-debug-enhanced'
 import '@/lib/i18n' // Initialize i18n
 
@@ -69,8 +70,9 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   }, [hasHydrated, language, t])
 
   return (
-    <FontPreloader>
+    <CloudFontLoader>
       {children}
-    </FontPreloader>
+      <FontVerificationPanel />
+    </CloudFontLoader>
   );
 }

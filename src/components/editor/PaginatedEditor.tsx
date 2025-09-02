@@ -7,7 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
 import { usePageManager } from '../../hooks/usePageManager';
-import { AVAILABLE_FONTS, LINE_HEIGHT_OPTIONS, getTitleFont } from '@/lib/constants';
+import { LINE_HEIGHT_OPTIONS, getTitleFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { debounce } from '../../lib/debounce';
@@ -22,7 +22,6 @@ import {
   ArrowLeft, 
   ArrowRight, 
   AlertCircle, 
-  Type, 
   BookOpen, 
   Bold as BoldIcon, 
   Italic as ItalicIcon,
