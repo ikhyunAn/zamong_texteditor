@@ -423,7 +423,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       return;
     }
     
-    if (pageInfo.currentPage >= 6) {
+    if (pageInfo.currentPage >= 4) {
       setPageBreakMessage(t('editor.pageBreakMessages.maxPagesReached'));
       return;
     }
@@ -514,7 +514,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
    * - Ctrl/Cmd + Left Arrow: Navigate to previous page (with smooth scrolling)
    * - Ctrl/Cmd + Right Arrow: Navigate to next page (with smooth scrolling)
    * - Ctrl/Cmd + Enter: Insert page break at current cursor position
-   * - Ctrl/Cmd + Shift + N: Add new empty page (up to 6 page limit)
+   * - Ctrl/Cmd + Shift + N: Add new empty page (up to 4 page limit)
    * 
    * All shortcuts are disabled when typing in the editor to prevent conflicts.
    * Focus management ensures the editor remains focused after navigation.
@@ -558,7 +558,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         // Ctrl/Cmd + Shift + N: Add new page
         else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
           event.preventDefault();
-          if (pages.length < 6) {
+          if (pages.length < 4) {
             addNewPageWithSync();
           }
         }
@@ -815,7 +815,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           {/* Page Break Button */}
           <Button 
             onClick={insertPageBreak}
-            disabled={pageInfo.currentPage >= 6}
+            disabled={pageInfo.currentPage >= 4}
             size="sm"
             variant="outline"
             title={t('editor.insertPageBreakTitle')}
@@ -826,7 +826,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           {/* Add New Page Button */}
           <Button 
             onClick={addNewPageWithSync}
-            disabled={pages.length >= 6}
+            disabled={pages.length >= 4}
             size="sm"
             variant="default"
             title={t('editor.addNewPageTitle')}
@@ -1066,10 +1066,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
               <div className="text-lg font-medium text-gray-800">
                 {t('editor.pageOf', { current: pageInfo.currentPage, total: pageInfo.totalPages })}
               </div>
-              {pageInfo.totalPages > 6 && (
+              {pageInfo.totalPages > 4 && (
                 <div className="text-sm text-red-600 flex items-center justify-center sm:justify-end gap-1 mt-1">
                   <AlertCircle className="w-4 h-4" />
-                  {t('editor.pagesOverLimit', { count: pageInfo.totalPages - 6 })}
+                  {t('editor.pagesOverLimit', { count: pageInfo.totalPages - 4 })}
                 </div>
               )}
             </div>

@@ -344,7 +344,7 @@ width: `${PAGE_WIDTH}px`,
             ))}
             
             {/* Add Page Button */}
-            {pages.length < 6 && (
+            {pages.length < 4 && (
               <div className="mx-auto" style={{ width: `${PAGE_WIDTH}px` }}>
                 <Button
                   variant="outline"
@@ -383,7 +383,7 @@ width: `${PAGE_WIDTH}px`,
               
               {/* Page Indicators */}
               <div className="flex items-center gap-1 max-w-[300px]">
-                {Array.from({ length: Math.min(pageInfo.totalPages, 6) }, (_, i) => (
+                {Array.from({ length: Math.min(pageInfo.totalPages, 4) }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => {
@@ -419,12 +419,12 @@ width: `${PAGE_WIDTH}px`,
             {/* Page Info */}
             <div className="text-center sm:text-right">
               <div className="text-lg font-medium text-gray-800">
-                Page {pageInfo.currentPage} of {Math.min(pageInfo.totalPages, 6)}
+                Page {pageInfo.currentPage} of {Math.min(pageInfo.totalPages, 4)}
               </div>
-              {pageInfo.totalPages > 6 && (
+              {pageInfo.totalPages > 4 && (
                 <div className="text-sm text-red-600 flex items-center justify-center sm:justify-end gap-1 mt-1">
                   <AlertCircle className="w-4 h-4" />
-                  {pageInfo.totalPages - 6} pages over limit
+                  {pageInfo.totalPages - 4} pages over limit
                 </div>
               )}
             </div>
