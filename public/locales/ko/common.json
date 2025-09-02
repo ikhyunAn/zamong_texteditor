@@ -70,7 +70,7 @@
   },
   "export": {
     "title": "미리보기 및 내보내기",
-    "description": "4가지 다른 배경 스타일로 총 {{count}}페이지{{plural}}의 이미지를 생성합니다. 각 페이지는 4가지 버전(Stage 1-4)을 생성합니다.",
+    "description": "4가지 다른 배경 스타일로 총 {{count}}페이지의 이미지를 생성합니다. 각 페이지는 4가지 버전(Stage 1-4)을 생성합니다.",
     "hideBackgrounds": "배경 숨기기",
     "showBackgrounds": "배경 보이기",
     "totalPages": "총 페이지: {{count}}",
