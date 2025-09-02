@@ -22,33 +22,9 @@
   font-display: swap;
 }
 
-/* LEGACY FONTS - for backward compatibility (deprecated) */
-/* 학교안심 Bold */
-@font-face {
-  font-family: 'HakgyoansimBareonbatangB';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* 학교안심 Regular */
-@font-face {
-  font-family: 'HakgyoansimBareonbatangR';
-  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Legacy alias */
-@font-face {
-  font-family: 'CustomFontTTF';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
+/* Only two fonts are used in this application:
+   1. KoPubWorldBatangLight - for titles and body text
+   2. CustomFont (나눔손글씨) - for author names only */
 
 @layer base {
   :root {

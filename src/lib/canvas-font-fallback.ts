@@ -13,29 +13,28 @@ export interface FontFallbackConfig {
 }
 
 /**
- * Font fallback configurations for different purposes
+ * Font fallback configurations for different purposes - Using only two fonts
  */
 export const CANVAS_FONT_FALLBACKS: FontFallbackConfig[] = [
   {
     primary: 'CustomFont',
     fallbacks: [
-      'NanumGothic',           // Common Korean web font
+      'KoPubWorldBatangLight', // Fallback to our body font if author font fails
       'Malgun Gothic',         // Windows Korean system font
       'Apple SD Gothic Neo',   // macOS Korean system font
-      'Gulim',                 // Alternative Windows Korean font
-      'Dotum',                 // Another Windows Korean font
+      'NanumGothic',          // Common Korean web font
+      'cursive',              // Handwriting-style fallback
       'sans-serif'            // Ultimate fallback
     ],
     purpose: 'author',
     testText: '작가 이름'
   },
   {
-    primary: 'HakgyoansimBareonbatangB',
+    primary: 'KoPubWorldBatangLight',
     fallbacks: [
-      'KoPubWorldBatangLight',  // Our primary body font as fallback
-      'NanumGothic',           // Common Korean web font
       'Malgun Gothic',         // Windows Korean system font
       'Apple SD Gothic Neo',   // macOS Korean system font
+      'NanumGothic',          // Common Korean web font
       'serif',                 // Serif fallback
       'sans-serif'            // Ultimate fallback
     ],
@@ -45,12 +44,11 @@ export const CANVAS_FONT_FALLBACKS: FontFallbackConfig[] = [
   {
     primary: 'KoPubWorldBatangLight',
     fallbacks: [
-      'HakgyoansimBareonbatangR', // Legacy font as fallback
-      'NanumGothic',            // Common Korean web font
-      'Malgun Gothic',          // Windows Korean system font
-      'Apple SD Gothic Neo',    // macOS Korean system font
-      'serif',                  // Serif fallback
-      'sans-serif'             // Ultimate fallback
+      'Malgun Gothic',         // Windows Korean system font
+      'Apple SD Gothic Neo',   // macOS Korean system font
+      'NanumGothic',          // Common Korean web font
+      'serif',                 // Serif fallback
+      'sans-serif'            // Ultimate fallback
     ],
     purpose: 'body',
     testText: '본문 텍스트'
@@ -250,23 +248,13 @@ export function loadKoreanSystemFonts(): void {
   font-display: swap;
 }
 
-/* Override our custom fonts with system fallbacks in case of loading failure */
+/* Override our two custom fonts with system fallbacks in case of loading failure */
 @font-face {
   font-family: 'CustomFont';
   src: url('/fonts/작가폰트_나눔손글씨%20딸에게%20엄마가.ttf') format('truetype'),
        local('Malgun Gothic'), 
        local('Apple SD Gothic Neo'), 
        local('NanumGothic');
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'HakgyoansimBareonbatangB';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype'),
-       local('Malgun Gothic'), 
-       local('Apple SD Gothic Neo'), 
-       local('NanumGothic');
-  font-weight: bold;
   font-display: swap;
 }
 
@@ -295,14 +283,14 @@ export function loadKoreanSystemFonts(): void {
 
   // Force loading by creating test elements
   const testContainer = document.createElement('div');
-  testContainer.style.cssText = `
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    visibility: hidden;
-    font-size: 16px;
-    line-height: 1;
-  `;
+  testContainer.style.cssText = [
+    'position: absolute',
+    'left: -9999px',
+    'top: -9999px', 
+    'visibility: hidden',
+    'font-size: 16px',
+    'line-height: 1'
+  ].join('; ') + ';';
 
   const koreanFonts = ['Malgun Gothic', 'Apple SD Gothic Neo', 'NanumGothic', 'Gulim', 'Dotum'];
   

@@ -4,8 +4,8 @@
   border: none;
   outline: none;
   background: transparent;
-  /* Use CSS font classes instead of inherit for consistency */
-  font-family: 'CustomFontTTF', '학교안심', 'HakgyoansimBareonbatangB', Arial, sans-serif;
+  /* Use only the two configured fonts with appropriate fallbacks */
+  font-family: 'KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'NanumGothic', Arial, sans-serif;
   font-size: inherit;
   line-height: inherit;
   

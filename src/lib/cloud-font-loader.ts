@@ -30,36 +30,22 @@ export interface FontLoadProgress {
 }
 
 /**
- * Font configurations with proper URL encoding
+ * Font configurations with proper URL encoding - Only two fonts used
  */
 export const CLOUD_FONT_CONFIGS: CloudFontConfig[] = [
   {
     name: 'KoPubWorldBatangLight',
     filename: 'KoPubWorld Batang Light.ttf',
     displayName: 'KoPub World Batang Light',
-    purpose: 'body',
+    purpose: 'body', // Used for both body text and titles
     fallbacks: ['Malgun Gothic', 'Apple SD Gothic Neo', 'NanumGothic', 'Arial', 'sans-serif']
   },
   {
     name: 'CustomFont',
     filename: '작가폰트_나눔손글씨 딸에게 엄마가.ttf',
-    displayName: 'Nanum Handwriting (Author Font)',
+    displayName: 'Nanum Handwriting (나눔손글씨)',
     purpose: 'author',
     fallbacks: ['KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'cursive', 'sans-serif']
-  },
-  {
-    name: 'HakgyoansimBareonbatangB',
-    filename: 'HakgyoansimBareonbatangB.ttf',
-    displayName: 'Hakgyoansim Bold',
-    purpose: 'title',
-    fallbacks: ['KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Arial', 'sans-serif']
-  },
-  {
-    name: 'HakgyoansimBareonbatangR',
-    filename: 'HakgyoansimBareonbatangR.ttf',
-    displayName: 'Hakgyoansim Regular',
-    purpose: 'body',
-    fallbacks: ['KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Arial', 'sans-serif']
   }
 ];
 
@@ -375,18 +361,31 @@ export async function loadAllCloudFonts(
  * Get the best available font for a purpose
  */
 export function getBestAvailableFont(purpose: 'title' | 'body' | 'author'): string {
-  const configs = CLOUD_FONT_CONFIGS.filter(config => config.purpose === purpose);
-  
-  for (const config of configs) {
-    if (isFontPreloaded(config.name)) {
-      console.log(`[Cloud Font Loader] Using ${config.name} for ${purpose}`);
-      return config.name;
+  // Map title and body to use the same font (KoPubWorldBatangLight)
+  if (purpose === 'title' || purpose === 'body') {
+    if (isFontPreloaded('KoPubWorldBatangLight')) {
+      console.log(`[Cloud Font Loader] Using KoPubWorldBatangLight for ${purpose}`);
+      return 'KoPubWorldBatangLight';
+    }
+    // Try fallbacks for body font
+    const bodyFallbacks = ['Malgun Gothic', 'Apple SD Gothic Neo', 'NanumGothic', 'Arial', 'sans-serif'];
+    for (const fallback of bodyFallbacks) {
+      if (isFontPreloaded(fallback)) {
+        console.log(`[Cloud Font Loader] Using fallback ${fallback} for ${purpose}`);
+        return fallback;
+      }
     }
   }
   
-  // Try fallbacks
-  for (const config of configs) {
-    for (const fallback of config.fallbacks) {
+  // Handle author font
+  if (purpose === 'author') {
+    if (isFontPreloaded('CustomFont')) {
+      console.log(`[Cloud Font Loader] Using CustomFont for ${purpose}`);
+      return 'CustomFont';
+    }
+    // Try fallbacks for author font
+    const authorFallbacks = ['KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'cursive', 'sans-serif'];
+    for (const fallback of authorFallbacks) {
       if (isFontPreloaded(fallback)) {
         console.log(`[Cloud Font Loader] Using fallback ${fallback} for ${purpose}`);
         return fallback;

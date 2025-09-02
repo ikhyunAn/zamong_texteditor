@@ -46,21 +46,23 @@ export const DEFAULT_BACKGROUNDS = [
   }
 ];
 
-// Available font configurations
+// Available font configurations - Only two fonts used
 export const AVAILABLE_FONTS = [
-  {
-    name: '나눔손글씨',
-    family: 'CustomFont',
-    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
-    type: 'custom' as const,
-    languages: ['ko'] as const // Best for Korean
-  },
   {
     name: 'KoPub 바탕 라이트',
     family: 'KoPubWorldBatangLight',
     path: '/fonts/KoPubWorld Batang Light.ttf',
     type: 'custom' as const,
-    languages: ['ko', 'en'] as const
+    languages: ['ko', 'en'] as const,
+    purpose: ['title', 'body'] as const // Used for titles and body text
+  },
+  {
+    name: '나눔손글씨',
+    family: 'CustomFont',
+    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    type: 'custom' as const,
+    languages: ['ko'] as const,
+    purpose: ['author'] as const // Used for author names only
   }
 ];
 

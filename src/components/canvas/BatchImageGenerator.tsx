@@ -6,9 +6,7 @@ import { fabric } from 'fabric';
 import { useStoryStore } from '@/store/useStoryStore';
 import { useToast } from '@/hooks/useToast';
 import type { StorySection } from '@/types';
-import { ensureFontsLoaded } from '@/lib/canvas-utils';
-import { verifyFontsForCanvas } from '@/lib/cloud-font-loader';
-import { verifyCanvasFonts, getBestCanvasFont, loadKoreanSystemFonts } from '@/lib/canvas-font-fallback';
+import { getBestCanvasFont } from '@/lib/canvas-font-fallback';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,14 +78,16 @@ export function BatchImageGenerator() {
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   
-  // Clean up blob URLs on unmount
+  // Clean up blob URLs on unmount only (not on every previewImages change)
   useEffect(() => {
     return () => {
       previewImages.forEach((preview) => {
-        URL.revokeObjectURL(preview.imageUrl);
+        if (preview.imageUrl && preview.imageUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(preview.imageUrl);
+        }
       });
     };
-  }, [previewImages]);
+  }, []); // Only run on unmount
   
   // Function to generate image with background
   const generateImageWithBackground = useCallback(async (
@@ -97,39 +97,18 @@ export function BatchImageGenerator() {
     backgroundId?: string
   ): Promise<string> => {
     return new Promise(async (resolve, reject) => {
-      try {
-        // Multi-layer font verification for maximum reliability
-        console.log('[Canvas] Multi-layer font verification for cloud deployment...');
-        
-        // Layer 1: Load Korean system fonts as base fallbacks
-        loadKoreanSystemFonts();
-        
-        // Layer 2: Try cloud font loading
-        try {
-          await ensureFontsLoaded();
-          const cloudResult = await verifyFontsForCanvas();
-          console.log('[Canvas] Cloud font verification:', cloudResult.ready);
-        } catch (cloudError) {
-          console.warn('[Canvas] Cloud font verification failed:', cloudError);
-        }
-        
-        // Layer 3: Final canvas-specific font verification with fallbacks
-        const { fonts, report } = await verifyCanvasFonts();
-        console.log('[Canvas] Final font verification:', report);
-        
-        // Store verified fonts for use in rendering
-        (window as unknown as { _canvasFonts?: unknown })._canvasFonts = fonts;
-        
-        console.log('[Canvas] All font verification layers complete, proceeding with canvas generation');
-      } catch (fontError) {
-        console.warn('[Canvas] Font verification failed, using emergency fallbacks:', fontError);
-        // Set emergency fallback fonts
-        (window as unknown as { _canvasFonts?: unknown })._canvasFonts = {
-          title: 'Malgun Gothic, Apple SD Gothic Neo, sans-serif',
-          body: 'Malgun Gothic, Apple SD Gothic Neo, sans-serif',
-          author: 'Malgun Gothic, Apple SD Gothic Neo, cursive'
-        };
-      }
+      // Use simplified font loading for canvas generation
+      console.log('[Canvas] Setting up fonts for canvas generation...');
+      
+      // Set reliable font fallbacks for canvas
+      const canvasFonts = {
+        title: getBestCanvasFont('title'),
+        body: getBestCanvasFont('body'), 
+        author: getBestCanvasFont('author')
+      };
+      
+      console.log('[Canvas] Canvas fonts selected:', canvasFonts);
+      (window as unknown as { _canvasFonts?: unknown })._canvasFonts = canvasFonts;
       const canvasElement = document.createElement('canvas');
       // Type assertion for fabric.js Canvas constructor
       const canvas = new (fabric as unknown as { Canvas: new (el: HTMLCanvasElement, options?: unknown) => unknown }).Canvas(canvasElement, {
@@ -314,42 +293,30 @@ export function BatchImageGenerator() {
       if (backgroundPreview) {
         console.log(`[Canvas] Loading background image: ${backgroundPath}`);
         
-        try {
-          // First try to fetch the image as a blob
-          const response = await fetch(backgroundPath);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-          }
-          
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          console.log(`[Canvas] Created blob URL for background: ${blobUrl}`);
-          
-          // Load background image using the blob URL
-          (fabric as unknown as { Image: { fromURL: (url: string, callback: (img: unknown, isError?: boolean) => void, options?: unknown) => void } }).Image.fromURL(
-            blobUrl,
-            (img: unknown, isError?: boolean) => {
-              // Clean up blob URL after loading
-              URL.revokeObjectURL(blobUrl);
-              
-              if (isError || !img) {
-                console.error(`[Canvas] Failed to load background image from blob: ${backgroundPath}`);
-                console.error('[Canvas] Error details:', isError);
-                // Continue without background
-                addTextAndRender();
-                return;
-              }
+        // Load background image with improved error handling
+        (fabric as unknown as { Image: { fromURL: (url: string, callback: (img: unknown, isError?: boolean) => void, options?: unknown) => void } }).Image.fromURL(
+          backgroundPath,
+          (img: unknown, isError?: boolean) => {
+            if (isError || !img) {
+              console.error(`[Canvas] Failed to load background image: ${backgroundPath}`);
+              console.error('[Canvas] Error details:', { isError, img });
+              // Continue without background
+              console.log('[Canvas] Continuing without background...');
+              addTextAndRender();
+              return;
+            }
 
-              console.log(`[Canvas] Successfully loaded background image: ${backgroundPath}`);
-              const imgObj = img as unknown as { width?: number; height?: number; set: (props: unknown) => void };
-              
-              // Scale image to fit canvas maintaining aspect ratio
-              const scaleX = EXPORT_DIMENSIONS.width / (imgObj.width || 1);
-              const scaleY = EXPORT_DIMENSIONS.height / (imgObj.height || 1);
-              const scale = Math.max(scaleX, scaleY);
+            console.log(`[Canvas] Successfully loaded background image: ${backgroundPath}`);
+            const imgObj = img as unknown as { width?: number; height?: number; set: (props: unknown) => void };
+            
+            // Scale image to fit canvas maintaining aspect ratio
+            const scaleX = EXPORT_DIMENSIONS.width / (imgObj.width || 1);
+            const scaleY = EXPORT_DIMENSIONS.height / (imgObj.height || 1);
+            const scale = Math.max(scaleX, scaleY);
 
-              console.log(`[Canvas] Image dimensions: ${imgObj.width}x${imgObj.height}, scale: ${scale}`);
+            console.log(`[Canvas] Image dimensions: ${imgObj.width}x${imgObj.height}, scale: ${scale}`);
 
+            try {
               imgObj.set({
                 scaleX: scale,
                 scaleY: scale,
@@ -362,14 +329,18 @@ export function BatchImageGenerator() {
               (canvas as unknown as { add: (obj: unknown) => void; sendToBack: (obj: unknown) => void }).add(img);
               (canvas as unknown as { add: (obj: unknown) => void; sendToBack: (obj: unknown) => void }).sendToBack(img);
               
+              console.log('[Canvas] Background image added to canvas');
+              addTextAndRender();
+            } catch (imgError) {
+              console.error('[Canvas] Error processing background image:', imgError);
+              // Continue without background if image processing fails
               addTextAndRender();
             }
-          );
-        } catch (fetchError) {
-          console.error(`[Canvas] Failed to fetch background image: ${backgroundPath}`, fetchError);
-          // Continue without background
-          addTextAndRender();
-        }
+          },
+          {
+            // Remove crossOrigin to avoid CORS issues
+          }
+        );
       } else {
         // Just add text without background
         addTextAndRender();
