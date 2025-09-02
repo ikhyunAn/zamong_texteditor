@@ -186,7 +186,7 @@ export function BatchImageGenerator() {
         
         // Add writer's name for stage 4, last page only
         const isLastPage = pageNumber === sections.length;
-        if (isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
+        if ( backgroundId === 'stage_4' && authorInfo.name) {
           const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
