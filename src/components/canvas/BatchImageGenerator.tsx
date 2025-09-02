@@ -185,7 +185,7 @@ export function BatchImageGenerator() {
         (canvas as unknown as { add: (obj: unknown) => void }).add(text);
         
         // Add writer's name for stage 4, last page only
-        const isLastPage = pageNumber === sections.length;
+        // const isLastPage = pageNumber === sections.length;
         if ( backgroundId === 'stage_4' && authorInfo.name) {
           const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
