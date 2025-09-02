@@ -12,11 +12,6 @@ interface SyncStatus {
   isHealthy: boolean;
 }
 
-interface SyncError {
-  message: string;
-  timestamp: number;
-  context?: string;
-}
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_BASE = 1000; // Base delay in milliseconds
@@ -38,37 +33,10 @@ export const useSyncStatus = () => {
 
   const { 
     getCurrentPageContent, 
-    setCurrentPageContent, 
     updatePage,
     pages,
     currentPageIndex
   } = useStoryStore();
-
-  // Initialize sync status monitoring
-  useEffect(() => {
-    setSyncStatus(prev => ({ ...prev, state: 'idle', isHealthy: true }));
-    
-    // Start health check interval
-    healthCheckIntervalRef.current = setInterval(() => {
-      performHealthCheck();
-    }, SYNC_HEALTH_CHECK_INTERVAL);
-
-    return () => {
-      if (healthCheckIntervalRef.current) {
-        clearInterval(healthCheckIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Monitor store state changes to detect pending changes
-  useEffect(() => {
-    const currentContent = getCurrentPageContent();
-    const hasChanges = currentContent !== lastEditorContentRef.current;
-    
-    if (hasChanges && syncStatus.state === 'synced') {
-      setSyncStatus(prev => ({ ...prev, pendingChanges: true, state: 'idle' }));
-    }
-  }, [getCurrentPageContent, syncStatus.state]);
 
   // Perform sync health check
   const performHealthCheck = useCallback(() => {
@@ -85,6 +53,32 @@ export const useSyncStatus = () => {
       // This prevents the duplication issue
     }
   }, [syncStatus.lastSyncTime, syncStatus.pendingChanges]);
+
+  // Initialize sync status monitoring
+  useEffect(() => {
+    setSyncStatus(prev => ({ ...prev, state: 'idle', isHealthy: true }));
+    
+    // Start health check interval
+    healthCheckIntervalRef.current = setInterval(() => {
+      performHealthCheck();
+    }, SYNC_HEALTH_CHECK_INTERVAL);
+
+    return () => {
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+      }
+    };
+  }, [performHealthCheck]);
+
+  // Monitor store state changes to detect pending changes
+  useEffect(() => {
+    const currentContent = getCurrentPageContent();
+    const hasChanges = currentContent !== lastEditorContentRef.current;
+    
+    if (hasChanges && syncStatus.state === 'synced') {
+      setSyncStatus(prev => ({ ...prev, pendingChanges: true, state: 'idle' }));
+    }
+  }, [getCurrentPageContent, syncStatus.state]);
 
   // Enhanced sync function with validation and retry
   const performSync = useCallback(async (

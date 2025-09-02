@@ -115,52 +115,51 @@ export function useCanvasPreview(
   }, []);
 
   // Debounced update function
-  const debouncedUpdate = useCallback(
-    debounce(async () => {
-      if (!canvasRef.current || isUpdatingRef.current) return;
+  const debouncedUpdate = useCallback(async () => {
+    if (!canvasRef.current || isUpdatingRef.current) return;
 
-      // Cancel any previous update
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+    // Cancel any previous update
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      isUpdatingRef.current = true;
+      onUpdateStart?.();
+
+      await updateCanvasPreview(
+        canvasRef.current,
+        content,
+        editorSettings,
+        undefined, // No background image in basic preview
+        controller.signal
+      );
+
+      if (!controller.signal.aborted) {
+        onUpdateComplete?.();
       }
-
-      // Create new abort controller
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      try {
-        isUpdatingRef.current = true;
-        onUpdateStart?.();
-
-        await updateCanvasPreview(
-          canvasRef.current,
-          content,
-          editorSettings,
-          undefined, // No background image in basic preview
-          controller.signal
-        );
-
-        if (!controller.signal.aborted) {
-          onUpdateComplete?.();
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          onError?.(error instanceof Error ? error : new Error('Canvas update failed'));
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          isUpdatingRef.current = false;
-        }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        onError?.(error instanceof Error ? error : new Error('Canvas update failed'));
       }
-    }, debounceMs),
-    [canvasRef, editorSettings, content, updateCanvasPreview, debounceMs, onUpdateStart, onUpdateComplete, onError]
-  );
+    } finally {
+      if (!controller.signal.aborted) {
+        isUpdatingRef.current = false;
+      }
+    }
+  }, [editorSettings, content, updateCanvasPreview, onUpdateStart, onUpdateComplete, onError, canvasRef]);
 
   // Effect to trigger updates when dependencies change
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    debouncedUpdate();
+    // Create debounced function inside useEffect to avoid dependency issues
+    const debouncedFn = debounce(debouncedUpdate, debounceMs);
+    debouncedFn();
 
     // Cleanup function
     return () => {
@@ -168,7 +167,7 @@ export function useCanvasPreview(
         abortControllerRef.current.abort();
       }
     };
-  }, [debouncedUpdate]);
+  }, [debouncedUpdate, canvasRef, debounceMs]);
 
   // Cleanup on unmount
   useEffect(() => {

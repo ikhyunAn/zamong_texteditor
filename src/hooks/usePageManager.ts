@@ -152,7 +152,7 @@ export const usePageManager = () => {
         currentPageContent: newPages[currentPageIndex]?.content
       });
     }
-  }, [sections, splitIntoPages, setPages, currentPageIndex]);
+  }, [sections, splitIntoPages, setPages, currentPageIndex, pages]);
 
   // Get current page content (returns page object)
   const getCurrentPage = useCallback(() => {
@@ -257,7 +257,7 @@ export const usePageManager = () => {
         console.log(`[addNewPage-${timestamp}] Flag reset to false`);
       }, 100);
     }
-  }, [addEmptyPage, storeNavigateToPage]);
+  }, [addEmptyPage, storeNavigateToPage, showWarning, showError]);
 
   // Update the current page content
   const updateCurrentPageContent = useCallback((content: string) => {
@@ -305,7 +305,7 @@ export const usePageManager = () => {
       }
     }
     return false; // Indicate failed sync
-  }, [getCurrentPageContent, updatePage, syncPagesToSections]);
+  }, [getCurrentPageContent, updatePage]);
 
   // Load content for a specific page with validation
   const loadPageContent = useCallback((pageIndex: number) => {
@@ -423,7 +423,7 @@ export const usePageManager = () => {
     
     console.log(`Navigation completed successfully in ${navigationDuration.toFixed(2)}ms`);
     console.groupEnd();
-  }, [syncContentToPage, storeNavigateToPage, loadPageContent, getCurrentPageContent, updatePage, syncPagesToSections, setCurrentPageContent]);
+  }, [syncContentToPage, storeNavigateToPage, loadPageContent, getCurrentPageContent, updatePage, setCurrentPageContent]);
 
   return {
     // Page data

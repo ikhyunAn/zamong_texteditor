@@ -13,7 +13,7 @@ import {
   BookOpen,
   FileText,
   Plus,
-  Image,
+  Image as ImageIcon,
   ImageOff,
   AlignLeft,
   AlignCenter,
@@ -145,7 +145,7 @@ const [showLineWarning, setShowLineWarning] = useState(false);
       console.log(`[Font Init] Setting primary font on mount: ${primaryFont}`);
       setFontFamily(primaryFont);
     }
-  }, []); // Only run on mount
+  }, [editorSettings.fontFamily, setFontFamily]);
   
   // Clear caches when font changes
   useEffect(() => {
@@ -249,7 +249,7 @@ const [showLineWarning, setShowLineWarning] = useState(false);
               onClick={() => setBackgroundPreview(!backgroundPreview)}
               className={`px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 transition-all transform ease-in-out ${backgroundPreview ? 'bg-blue-100' : 'bg-white'}`}
             >
-              {backgroundPreview ? <ImageOff className="w-4 h-4" /> : <Image className="w-4 h-4" />}
+              {backgroundPreview ? <ImageOff className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
               {backgroundPreview ? 'Disable Background' : 'Enable Background'}
             </button>
           </div>

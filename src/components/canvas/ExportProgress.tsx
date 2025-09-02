@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// import Image from 'next/image'; // Not needed for blob URLs
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';

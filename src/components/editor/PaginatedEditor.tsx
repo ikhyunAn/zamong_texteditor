@@ -46,7 +46,9 @@ const PAGE_WIDTH = 900;
 const PAGE_HEIGHT = 1600;
 const PAGE_PADDING = 60;
 
-const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor: any) => void }> = ({ className, onEditorReady }) => {
+import { Editor } from '@tiptap/core';
+
+const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor: Editor) => void }> = ({ className, onEditorReady }) => {
   const { t } = useTranslation('common');
   const { 
     editorSettings, 
@@ -69,8 +71,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     navigateToPage,
     addNewPage,
     updateCurrentPageContent,
-    syncContentToPage,
-    storeUpdatePage: updatePage
   } = usePageManager();
   
   // Using only KoPubWorldBatangLight font - no font selection needed
@@ -82,9 +82,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     syncNow, 
     queueSync, 
     isSyncing,
-    hasError,
-    syncStatus,
-    validateSyncState
+    syncStatus
   } = useSyncStatus();
 
   // Refs for content integrity
@@ -125,7 +123,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       console.log(`[Font Init] Setting primary font on mount: ${primaryFont}`);
       setFontFamily(primaryFont);
     }
-  }, []); // Only run on mount
+  }, [editorSettings.fontFamily, setFontFamily]); // Include dependencies
 
   const editor = useEditor({
     extensions: [
@@ -168,8 +166,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
 
   useEffect(() => {
     if (editor) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleUpdate = ({ editor }: { editor: any }) => {
+      const handleUpdate = ({ editor }: { editor: Editor }) => {
         const newHtmlContent = editor.getHTML();
         debouncedUpdateContent(newHtmlContent);
         updateTextAlignment();
@@ -373,7 +370,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       console.error('[Navigation] Error during navigation:', error);
       isNavigatingRef.current = false;
     }
-  }, [editor, currentPageIndex, pages, navigateToPage, syncNow]);
+  }, [editor, currentPageIndex, pages, navigateToPage, syncNow, storeSnapshot]);
 
   // Add new page wrapper that syncs current editor content before adding new page
   const addNewPageWithSync = useCallback(() => {
@@ -382,6 +379,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       const currentEditorHtml = editor.getHTML();
       const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
       console.log('[AddNewPage] Syncing editor content before adding new page:', currentEditorContent.length, 'characters, newlines:', currentEditorContent.split('\n').length - 1);
+      
+      // Store snapshot before adding new page
+      storeSnapshot(currentPageIndex, currentEditorContent);
       
       // Sync immediately with high priority
       syncNow(currentEditorContent, 'add-new-page').then(() => {
@@ -392,7 +392,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       // If no editor, just add new page
       addNewPage();
     }
-  }, [editor, syncNow, addNewPage]);
+  }, [editor, syncNow, addNewPage, storeSnapshot, currentPageIndex]);
 
   // Display sync status notification (replaces manual sync)  
   useEffect(() => {
@@ -549,7 +549,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
         scrollToEditor();
       }, 200); // Increased delay to ensure navigation completes
     }, 50);
-  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, navigateToPage, scrollToEditor, syncNow]);
+  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, scrollToEditor, syncNow, t]);
 
   /**
    * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION AND EDITING
@@ -1163,14 +1163,14 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
   const { setCurrentStep, content, syncPagesToSections, pages, sections } = useStoryStore();
   const { syncNow, isSyncing } = useSyncStatus();
   
-  const { showWarning, showError, showSuccess } = useToast();
+  const { showWarning, showError } = useToast();
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Reference to the editor instance so we can access current content
-  const editorRef = useRef(null);
+  const editorRef = useRef<Editor | null>(null);
   
   // Callback to receive the editor instance from child component
-  const handleEditorReady = useCallback((editor: any) => {
+  const handleEditorReady = useCallback((editor: Editor) => {
     editorRef.current = editor;
     console.log('[Wrapper] Editor instance received:', !!editor);
   }, []);
@@ -1191,7 +1191,9 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
     setIsTransitioning(true);
 
     // Get store state once at the beginning to avoid scoping issues
-    const { currentPageIndex: initialPageIndex, pages: initialPages } = useStoryStore.getState();
+    const storeState = useStoryStore.getState();
+    console.log('Initial store state captured for transition');
+    console.log(storeState);
     
     try {
       // DEBUG: Log current state before transition
@@ -1231,9 +1233,9 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
         console.log('[Transition] Editor content preview:', currentEditorContent.substring(0, 100) + '...');
         console.log('[Transition] Stored content preview:', (currentPage.content || '').substring(0, 100) + '...');
         
-        const syncSuccess = await syncNow(currentEditorContent, 'pre-transition-sync');
+      const syncSuccess = await syncNow(currentEditorContent, 'pre-transition-sync');
         if (!syncSuccess) {
-          console.warn('[Transition] Failed to sync current page content, but continuing...');
+          console.warn(t('transition.syncFailed'));
         }
       } else {
         console.log('[Transition] No content changes detected, skipping pre-sync');
@@ -1271,8 +1273,8 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
     } catch (error) {
       console.error('[Transition] Error during step transition:', error);
       showError(
-        'Sync Error', 
-        `Failed to sync content: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
+        t('transition.syncError'), 
+        `${t('transition.syncErrorMessage')}: ${error instanceof Error ? error.message : t('transition.unknownError')}. ${t('transition.pleaseRetry')}.`
       );
     } finally {
       setIsTransitioning(false);
