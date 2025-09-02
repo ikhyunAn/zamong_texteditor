@@ -189,14 +189,16 @@ export function FontVerificationPanel() {
                 <EyeOff className="w-4 h-4" />
               </Button>
             </div>
-            <CardDescription>
-              Production font loading status
+            <div>
+              <CardDescription>
+                Production font loading status
+              </CardDescription>
               {lastVerified && (
                 <div className="text-xs text-gray-500 mt-1">
                   Last checked: {lastVerified.toLocaleTimeString()}
                 </div>
               )}
-            </CardDescription>
+            </div>
           </CardHeader>
           
           <CardContent className="space-y-4">
