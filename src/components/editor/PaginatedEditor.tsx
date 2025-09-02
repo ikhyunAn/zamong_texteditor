@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { useTranslation } from 'react-i18next';
 import StarterKit from '@tiptap/starter-kit';
 import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
 import { usePageManager } from '../../hooks/usePageManager';
+import { useSyncStatus } from '../../hooks/useSyncStatus';
 import { LINE_HEIGHT_OPTIONS, getTitleFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -33,7 +34,7 @@ import {
   AlignHorizontalJustifyEnd,
   Plus,
   Minus,
-  RefreshCw
+  Check
 } from 'lucide-react';
 
 interface PaginatedEditorProps {
@@ -45,7 +46,7 @@ const PAGE_WIDTH = 900;
 const PAGE_HEIGHT = 1600;
 const PAGE_PADDING = 60;
 
-const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
+const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor: any) => void }> = ({ className, onEditorReady }) => {
   const { t } = useTranslation('common');
   const { 
     editorSettings, 
@@ -75,6 +76,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
   // Using only KoPubWorldBatangLight font - no font selection needed
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Enhanced sync status management
+  const { 
+    syncNow, 
+    queueSync, 
+    isSyncing,
+    hasError,
+    syncStatus,
+    validateSyncState
+  } = useSyncStatus();
 
   // Refs for content integrity
   const firstPageSnapshotRef = useRef<string>('');
@@ -147,9 +158,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       if (textContent !== getCurrentPageContent()) {
         console.log('[Editor] Updating store content:', textContent.length, 'characters, newlines:', textContent.split('\n').length - 1);
         updateCurrentPageContent(textContent);
+        
+        // Queue sync with the updated content
+        queueSync(textContent, 'editor-update');
       }
     }, 300),
-    [getCurrentPageContent, updateCurrentPageContent]
+    [getCurrentPageContent, updateCurrentPageContent, queueSync]
   );
 
   useEffect(() => {
@@ -166,6 +180,21 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       });
     }
   }, [editor, debouncedUpdateContent, updateTextAlignment]);
+
+  // Add auto-sync on window blur (user switching tabs/windows)
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleBlur = () => {
+      if (editor && !isNavigatingRef.current) {
+        const currentContent = htmlToTextWithLineBreaks(editor.getHTML());
+        syncNow(currentContent, 'window-blur');
+      }
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [editor, syncNow]);
 
 
   // Enhanced Content Integrity Snapshot Utilities
@@ -296,53 +325,55 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
         storeSnapshot(currentPageIndex, currentEditorContent);
       }
       
-      // Step 2: Save current page content synchronously
-      if (currentPageIndex >= 0 && currentPageIndex < pages.length) {
-        const currentPageId = pages[currentPageIndex].id;
-        console.log('[Navigation] Saving content to current page:', currentPageId);
-        updatePage(currentPageId, currentEditorContent);
-      }
-      
-      // Step 3: Navigate to new page
-      console.log('[Navigation] Navigating to page:', pageIndex);
-      navigateToPage(pageIndex);
-      
-      // Step 4: Load new page content with a delay to ensure state has updated
-      setTimeout(() => {
-        try {
-          const targetPageContent = pages[pageIndex]?.content || '';
-          console.log('[Navigation] Loading target page content length:', targetPageContent.length);
-          
-          // Temporarily disable editor updates to prevent feedback loops
-          const originalOnUpdate = editor.options.onUpdate;
-          editor.setOptions({ onUpdate: undefined });
-          
-          // Clear and set new content
-          editor.commands.clearContent();
-          const htmlContent = targetPageContent ? 
-            textToHtmlWithLineBreaks(targetPageContent) : '<p></p>';
-          editor.commands.setContent(htmlContent);
-          
-          // Re-enable editor updates after a brief delay
-          setTimeout(() => {
-            if (editor && !editor.isDestroyed) {
-              editor.setOptions({ onUpdate: originalOnUpdate });
-              // Focus the editor
-              editor.commands.focus('start');
-            }
-          }, 50);
-          
-        } finally {
-          // Clear navigation flag
-          isNavigatingRef.current = false;
+      // Step 2: Sync current page content immediately and wait for confirmation
+      syncNow(currentEditorContent, 'navigation').then(syncSuccess => {
+        if (!syncSuccess) {
+          console.warn('[Navigation] Sync failed, continuing with navigation anyway');
         }
-      }, 100);
+        
+        // Step 3: Navigate to new page
+        console.log('[Navigation] Navigating to page:', pageIndex);
+        navigateToPage(pageIndex);
+        
+        // Step 4: Load new page content with a delay to ensure state has updated
+        setTimeout(() => {
+          try {
+            // CRITICAL FIX: Get fresh pages state from store to avoid stale closure
+            const { pages: freshPages } = useStoryStore.getState();
+            const targetPageContent = freshPages[pageIndex]?.content || '';
+            console.log('[Navigation] Loading target page content length:', targetPageContent.length);
+            
+            // Temporarily disable editor updates to prevent feedback loops
+            const originalOnUpdate = editor.options.onUpdate;
+            editor.setOptions({ onUpdate: undefined });
+            
+            // Clear and set new content
+            editor.commands.clearContent();
+            const htmlContent = targetPageContent ? 
+              textToHtmlWithLineBreaks(targetPageContent) : '<p></p>';
+            editor.commands.setContent(htmlContent);
+            
+            // Re-enable editor updates after a brief delay
+            setTimeout(() => {
+              if (editor && !editor.isDestroyed) {
+                editor.setOptions({ onUpdate: originalOnUpdate });
+                // Focus the editor
+                editor.commands.focus('start');
+              }
+            }, 50);
+            
+          } finally {
+            // Clear navigation flag
+            isNavigatingRef.current = false;
+          }
+        }, 100);
+      });
       
     } catch (error) {
       console.error('[Navigation] Error during navigation:', error);
       isNavigatingRef.current = false;
     }
-  }, [editor, currentPageIndex, pages, navigateToPage, updatePage]);
+  }, [editor, currentPageIndex, pages, navigateToPage, syncNow]);
 
   // Add new page wrapper that syncs current editor content before adding new page
   const addNewPageWithSync = useCallback(() => {
@@ -351,25 +382,26 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       const currentEditorHtml = editor.getHTML();
       const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
       console.log('[AddNewPage] Syncing editor content before adding new page:', currentEditorContent.length, 'characters, newlines:', currentEditorContent.split('\n').length - 1);
-      syncContentToPage(currentEditorContent);
-    }
-    // Then proceed with adding new page
-    addNewPage();
-  }, [editor, syncContentToPage, addNewPage]);
-
-  const handleManualSync = useCallback(() => {
-    console.log('[Sync] Manual synchronization triggered');
-    if (editor) {
-      const currentEditorHtml = editor.getHTML();
-      const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
-      syncContentToPage(currentEditorContent);
-      setPageBreakMessage(t('editor.pageBreakMessages.syncSuccess'));
-      setTimeout(() => setPageBreakMessage(''), 2000);
+      
+      // Sync immediately with high priority
+      syncNow(currentEditorContent, 'add-new-page').then(() => {
+        // Then proceed with adding new page after sync completes
+        addNewPage();
+      });
     } else {
-      setPageBreakMessage(t('editor.pageBreakMessages.editorNotReadySync'));
+      // If no editor, just add new page
+      addNewPage();
+    }
+  }, [editor, syncNow, addNewPage]);
+
+  // Display sync status notification (replaces manual sync)  
+  useEffect(() => {
+    // Only show error messages, not success messages (for less intrusive UX)
+    if (syncStatus.state === 'error') {
+      setPageBreakMessage(`Sync error: ${syncStatus.errorMessage || 'Unknown error'}`);
       setTimeout(() => setPageBreakMessage(''), 3000);
     }
-  }, [editor, syncContentToPage]);
+  }, [syncStatus.state, syncStatus.errorMessage]);
 
   // Smooth scroll to editor when page changes
   // Enhanced smooth scroll to editor with focus management
@@ -473,10 +505,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       updateCurrentPageContent(beforeContent); // Don't trim to preserve whitespace
       // Set editor content with preserved formatting
       editor.commands.setContent(beforeHtml);
+      
+      // Automatically sync content immediately
+      syncNow(beforeContent, 'page-break-before');
     } else {
       // If no content before cursor, keep current page empty
       updateCurrentPageContent('');
       editor.commands.setContent('<p></p>');
+      
+      // Sync empty content
+      syncNow('', 'page-break-empty');
     }
     
     // Create new page with content after cursor and navigate to it
@@ -494,18 +532,24 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             // Focus the editor on the new page
             editor.commands.focus('start');
           }
+          
+          // Automatically sync the new page content
+          syncNow(afterContent, 'page-break-after');
         } else {
           // Ensure new page starts with proper structure and focus
           if (editor && !editor.isDestroyed) {
             editor.commands.setContent('<p></p>');
             editor.commands.focus('start');
           }
+          
+          // Sync empty content for new page
+          syncNow('', 'page-break-new-empty');
         }
         // Scroll to editor after navigation
         scrollToEditor();
       }, 200); // Increased delay to ensure navigation completes
     }, 50);
-  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, navigateToPage, scrollToEditor]);
+  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, navigateToPage, scrollToEditor, syncNow]);
 
   /**
    * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION AND EDITING
@@ -648,6 +692,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       setFontFamily(primaryFont);
     }
   }, [editorSettings.fontFamily, setFontFamily]);
+
+  // Notify parent when editor is ready
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   if (!editor) {
     return (
@@ -801,16 +852,19 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Synchronization Button */}
-          <Button 
-            onClick={handleManualSync}
-            size="sm"
-            variant="outline"
-            title={t('editor.synchronizeTitle')}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {t('editor.synchronize')}
-          </Button>
+          {/* Sync Status Indicator (replaces sync button) */}
+          {isSyncing && (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+              <span>Syncing...</span>
+            </div>
+          )}
+          {!isSyncing && syncStatus.state === 'synced' && syncStatus.lastSyncTime && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <Check className="w-4 h-4" />
+              <span>Auto-sync enabled</span>
+            </div>
+          )}
           
           {/* Page Break Button */}
           <Button 
@@ -1106,29 +1160,149 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
 // Add navigation section wrapper
 const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ className }) => {
   const { t } = useTranslation('common');
-  const { setCurrentStep, content, syncPagesToSections } = useStoryStore();
+  const { setCurrentStep, content, syncPagesToSections, pages, sections } = useStoryStore();
+  const { syncNow, isSyncing } = useSyncStatus();
   
-  const { showWarning } = useToast();
+  const { showWarning, showError, showSuccess } = useToast();
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Reference to the editor instance so we can access current content
+  const editorRef = useRef(null);
+  
+  // Callback to receive the editor instance from child component
+  const handleEditorReady = useCallback((editor: any) => {
+    editorRef.current = editor;
+    console.log('[Wrapper] Editor instance received:', !!editor);
+  }, []);
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Validate content
     if (!content || content.trim() === '') {
       showWarning(t('editor.incompleteContent'), t('editor.incompleteContentMessage'));
       return;
     }
-    // Sync pages to sections before going to image generation
-    syncPagesToSections();
-    setCurrentStep(2);
+
+    // Validate pages
+    if (pages.length === 0) {
+      showWarning('No Pages', 'Please create at least one page before proceeding.');
+      return;
+    }
+
+    setIsTransitioning(true);
+
+    // Get store state once at the beginning to avoid scoping issues
+    const { currentPageIndex: initialPageIndex, pages: initialPages } = useStoryStore.getState();
+    
+    try {
+      // DEBUG: Log current state before transition
+      console.group('[Transition Debug] Pre-transition state');
+      console.log('Pages count:', pages.length);
+      console.log('Pages data:', pages.map(p => ({ id: p.id, contentLength: p.content?.length || 0, preview: p.content?.substring(0, 50) + '...' })));
+      console.log('Current sections count:', sections.length);
+      console.log('Current sections data:', sections.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })));
+      console.groupEnd();
+
+      // Step 1: Sync current editor content to current page before transition
+      console.log('[Transition] Syncing current editor content before image generation...');
+      
+      // Get current editor content if we have access to the editor instance
+      let currentEditorContent: string | null = null;
+      if (editorRef.current && typeof editorRef.current.getHTML === 'function') {
+        console.log('[Transition] Using live editor content from editor instance');
+        const editorHtml = editorRef.current.getHTML();
+        currentEditorContent = htmlToTextWithLineBreaks(editorHtml);
+      } else {
+        console.log('[Transition] Editor not available, using stored content');
+        const { getCurrentPageContent } = useStoryStore.getState();
+        currentEditorContent = getCurrentPageContent();
+      }
+      
+      // Use fresh state for current operations
+      const { currentPageIndex, pages: currentPages } = useStoryStore.getState();
+      const currentPage = currentPages[currentPageIndex];
+      
+      console.log('[Transition] Current page index:', currentPageIndex);
+      console.log('[Transition] Current page ID:', currentPage?.id);
+      console.log('[Transition] Live editor content length:', currentEditorContent?.length || 0);
+      console.log('[Transition] Current page stored content length:', currentPage?.content?.length || 0);
+      // Check if there are unsaved editor changes that need to be synced
+      if (currentPage && currentEditorContent && currentEditorContent !== currentPage.content) {
+        console.log('[Transition] Content mismatch detected, syncing live editor content to current page');
+        console.log('[Transition] Editor content preview:', currentEditorContent.substring(0, 100) + '...');
+        console.log('[Transition] Stored content preview:', (currentPage.content || '').substring(0, 100) + '...');
+        
+        const syncSuccess = await syncNow(currentEditorContent, 'pre-transition-sync');
+        if (!syncSuccess) {
+          console.warn('[Transition] Failed to sync current page content, but continuing...');
+        }
+      } else {
+        console.log('[Transition] No content changes detected, skipping pre-sync');
+      }
+      
+      // Step 2: Validate page state 
+      console.log('[Transition] Validating page state after sync...');
+      const { pages: updatedPages } = useStoryStore.getState();
+      const allPagesHaveContent = updatedPages.every(page => 
+        typeof page.content === 'string' && page.id
+      );
+      
+      if (!allPagesHaveContent) {
+        throw new Error('Invalid page content detected');
+      }
+
+      // Step 2: Sync pages to sections with validation
+      console.log('[Transition] Syncing pages to sections...');
+      syncPagesToSections();
+      
+      // DEBUG: Check what happened after sync
+      const { sections: updatedSections } = useStoryStore.getState();
+      console.group('[Transition Debug] Post-sync state');
+      console.log('Updated sections count:', updatedSections.length);
+      console.log('Updated sections data:', updatedSections.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })));
+      console.groupEnd();
+      
+      // Step 4: Brief delay to ensure all sync operations complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Step 5: Navigate to image generation
+      console.log('[Transition] All sync operations completed, navigating to image generation');
+      setCurrentStep(2);
+      
+    } catch (error) {
+      console.error('[Transition] Error during step transition:', error);
+      showError(
+        'Sync Error', 
+        `Failed to sync content: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
+      );
+    } finally {
+      setIsTransitioning(false);
+    }
   };
   
-  const handleBack = () => {
-    // Dispatch event to indicate return from preview
-    window.dispatchEvent(new CustomEvent('returnFromPreview'));
-    setCurrentStep(0);
+  const handleBack = async () => {
+    setIsTransitioning(true);
+    
+    try {
+      // Sync current state before navigating back
+      if (content && content.trim()) {
+        await syncNow(content, 'back-navigation');
+      }
+      
+      // Dispatch event to indicate return from preview
+      window.dispatchEvent(new CustomEvent('returnFromPreview'));
+      setCurrentStep(0);
+    } catch (error) {
+      console.warn('[Transition] Error syncing during back navigation:', error);
+      // Don't block navigation for back button
+      setCurrentStep(0);
+    } finally {
+      setIsTransitioning(false);
+    }
   };
   
   return (
     <div className="space-y-6">
-      <PaginatedEditor className={className} />
+      <PaginatedEditor className={className} onEditorReady={handleEditorReady} />
       
       {/* Navigation */}
       <div className="flex justify-between">
@@ -1136,6 +1310,7 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
           type="button"
           variant="outline"
           onClick={handleBack}
+          disabled={isTransitioning}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('editor.backToAuthorInfo')}
@@ -1144,9 +1319,16 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
         <Button
           type="button"
           onClick={handleNext}
+          disabled={isTransitioning || isSyncing}
+          className="relative"
         >
-          {t('editor.previewExport')}
-          <ArrowRight className="w-4 h-4 ml-2" />
+          {isTransitioning && (
+            <div className="w-4 h-4 mr-2 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+          )}
+          {!isTransitioning && (
+            <ArrowRight className="w-4 h-4 ml-2" />
+          )}
+          {isTransitioning ? 'Syncing...' : t('editor.previewExport')}
         </Button>
       </div>
     </div>
@@ -1155,4 +1337,15 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
 
 export { PaginatedEditor, PaginatedEditorWithNavigation };
 export default PaginatedEditorWithNavigation;
+
+// Auto-sync implementation notes:
+// 1. Automatic sync triggers have been added to:
+//    - Editor content changes (via debouncedUpdateContent)
+//    - Page navigation (via navigateToPageWithEditorSync)
+//    - Window blur events (via window blur listener)
+//    - Page break operations (in insertPageBreak)
+//    - Adding new pages (in addNewPageWithSync)
+// 2. The manual sync button has been replaced with status indicators
+// 3. Sync operations are managed through the useSyncStatus hook
+//    with proper error handling and retry mechanisms
 

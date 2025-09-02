@@ -35,8 +35,6 @@
     "decreaseFontSize": "Decrease font size",
     "increaseFontSize": "Increase font size",
     "lineHeightLabel": "Line height",
-    "synchronize": "Synchronize",
-    "synchronizeTitle": "Synchronize Content",
     "insertPageBreak": "Insert Page Break",
     "insertPageBreakTitle": "Insert page break (Ctrl+Enter)",
     "addNewPage": "Add New Page",
@@ -63,9 +61,7 @@
       "integrityFailed": "Page break operation failed. Content integrity could not be preserved.",
       "success": "Page break inserted successfully!",
       "contentRestored": "Content integrity restored!",
-      "contentRestoredFirstPage": "Content integrity restored for first page!",
-      "syncSuccess": "Content synchronized successfully!",
-      "editorNotReadySync": "Editor not ready. Please try again."
+      "contentRestoredFirstPage": "Content integrity restored for first page!"
     }
   },
   "export": {

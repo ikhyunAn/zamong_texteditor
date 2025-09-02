@@ -523,6 +523,11 @@ export function BatchImageGenerator() {
   
   // Generate previews when component mounts or sections/alignment change
   useEffect(() => {
+    console.group('[BatchImageGenerator] Preview trigger effect');
+    console.log('Sections count:', sections?.length || 0);
+    console.log('Sections data:', sections?.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })) || 'No sections');
+    console.groupEnd();
+    
     if (sections && sections.length > 0) {
       generatePreviews();
     }

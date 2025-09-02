@@ -424,6 +424,20 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
 
   syncPagesToSections: () => {
     const { pages, editorSettings } = get();
+    
+    console.group('[Store] syncPagesToSections - Converting pages to sections');
+    console.log('Input pages count:', pages.length);
+    console.log('Input pages data:', pages.map(p => ({ id: p.id, contentLength: p.content?.length || 0, preview: p.content?.substring(0, 50) + '...' })));
+    
+    // DEBUG: Log the FULL content of each input page
+    console.log('=== FULL PAGE CONTENT ANALYSIS ===');
+    pages.forEach((page, index) => {
+      console.log(`Page ${index + 1} (${page.id}):`);
+      console.log(`  Full content: "${page.content || 'EMPTY'}"`);
+      console.log(`  Content length: ${page.content?.length || 0}`);
+    });
+    console.log('===================================');
+    
     const sections = pages.map((page) => ({
       id: page.id.replace('page-', 'section-'),
       content: page.content,
@@ -435,6 +449,20 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
       },
       backgroundImage: undefined
     }));
+    
+    console.log('Output sections count:', sections.length);
+    console.log('Output sections data:', sections.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })));
+    
+    // DEBUG: Log the FULL content of each output section
+    console.log('=== FULL SECTION CONTENT ANALYSIS ===');
+    sections.forEach((section, index) => {
+      console.log(`Section ${index + 1} (${section.id}):`);
+      console.log(`  Full content: "${section.content || 'EMPTY'}"`);
+      console.log(`  Content length: ${section.content?.length || 0}`);
+    });
+    console.log('=======================================');
+    
+    console.groupEnd();
     
     set({ sections });
     

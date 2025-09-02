@@ -35,8 +35,6 @@
     "decreaseFontSize": "글자 크기 줄이기",
     "increaseFontSize": "글자 크기 늘리기",
     "lineHeightLabel": "줄 간격",
-    "synchronize": "동기화",
-    "synchronizeTitle": "내용 동기화",
     "insertPageBreak": "페이지 나누기 삽입",
     "insertPageBreakTitle": "페이지 나누기 삽입 (Ctrl+Enter)",
     "addNewPage": "새 페이지 추가",
@@ -63,9 +61,7 @@
       "integrityFailed": "페이지 나누기 작업이 실패했습니다. 내용 무결성을 보존할 수 없습니다.",
       "success": "페이지 나누기가 성공적으로 삽입되었습니다!",
       "contentRestored": "내용이 복원되었습니다!",
-      "contentRestoredFirstPage": "첫 번째 페이지의 내용이 복원되었습니다!",
-      "syncSuccess": "내용이 성공적으로 동기화되었습니다!",
-      "editorNotReadySync": "에디터가 준비되지 않았습니다. 다시 시도해주세요."
+      "contentRestoredFirstPage": "첫 번째 페이지의 내용이 복원되었습니다!"
     }
   },
   "export": {
