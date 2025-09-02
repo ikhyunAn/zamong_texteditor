@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // Default Text Styles
 export const DEFAULT_TEXT_STYLE = {
-  fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
+  fontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for body text
   fontSize: 36,
   color: '#000000',
   position: { x: 50, y: 50 },
@@ -51,14 +51,14 @@ export const AVAILABLE_FONTS = [
   {
     name: '나눔손글씨',
     family: 'CustomFont',
-    path: 'public/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
     type: 'custom' as const,
     languages: ['ko'] as const // Best for Korean
   },
   {
-    name: '학교안심',
-    family: 'CustomFontTTF',
-    path: 'public/fonts/HakgyoansimBareonbatangB.ttf',
+    name: 'KoPub 바탕 라이트',
+    family: 'KoPubWorldBatangLight',
+    path: '/fonts/KoPubWorld Batang Light.ttf',
     type: 'custom' as const,
     languages: ['ko', 'en'] as const
   }
@@ -67,23 +67,23 @@ export const AVAILABLE_FONTS = [
 // Helper function to get recommended font based on language
 export function getRecommendedFontForLanguage(): string {
   // Since users write in Korean regardless of UI language mode,
-  // use Regular weight for body text
-  return 'HakgyoansimBareonbatangR';
+  // use KoPubWorld Batang Light for body text
+  return 'KoPubWorldBatangLight';
 }
 
 // Helper function to get body text font (user-typed content)
 export function getBodyFont(): string {
-  return 'HakgyoansimBareonbatangR'; // 학교안심 Regular - for body text
+  return 'KoPubWorldBatangLight'; // KoPubWorld Batang Light - for body text
 }
 
 // Helper function to get title font
 export function getTitleFont(): string {
-  return 'HakgyoansimBareonbatangB'; // 학교안심 Bold - for titles
+  return 'KoPubWorldBatangLight'; // KoPubWorld Batang Light - for titles
 }
 
 // Helper function to get author name font
 export function getAuthorFont(): string {
-  return 'CustomFont'; // 나눔손글씨 딸에게 엄마가
+  return 'CustomFont'; // 나눔손글씨 딸에게 엄마가 - keep handwriting font for author names
 }
 
 // Text Colors
@@ -110,9 +110,9 @@ export const EDITOR_SETTINGS = {
   maxLines: 25,
   lineHeight: 1.5,
   fontSize: 16,
-  fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
-  titleFontFamily: 'HakgyoansimBareonbatangB', // Bold weight for titles
-  authorFontFamily: 'CustomFont', // Author name font - 나눔손글씨
+  fontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for body text
+  titleFontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for titles
+  authorFontFamily: 'CustomFont', // Author name font - 나눔손글씨 (문체 유지)
   backgroundColor: 'transparent',
   textColor: '#000000',
   padding: {

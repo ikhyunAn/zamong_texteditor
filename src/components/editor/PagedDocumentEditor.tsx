@@ -131,7 +131,7 @@ const PagedDocumentEditor: React.FC<PagedDocumentEditorProps> = ({ className }) 
     updateCurrentPageContent
   } = usePageManager();
   
-  const [selectedFont, setSelectedFont] = useState(editorSettings.fontFamily);
+  // Using only KoPubWorldBatangLight font - no font selection needed
 const [showLineWarning, setShowLineWarning] = useState(false);
   const [backgroundPreview, setBackgroundPreview] = useState(true);
   
@@ -140,48 +140,33 @@ const [showLineWarning, setShowLineWarning] = useState(false);
     initializeWithEmptyPage();
   }, [initializeWithEmptyPage]);
   
-  // Force Korean font on component mount (ensure consistency)
+  // Force KoPubWorld Batang Light font on component mount (ensure consistency)
   useEffect(() => {
-    const koreanFont = 'CustomFontTTF';
-    if (editorSettings.fontFamily !== koreanFont) {
-      console.log(`[Font Init] Forcing Korean font on mount: ${koreanFont}`);
-      setFontFamily(koreanFont);
-      setSelectedFont(koreanFont);
+    const primaryFont = 'KoPubWorldBatangLight';
+    if (editorSettings.fontFamily !== primaryFont) {
+      console.log(`[Font Init] Setting primary font on mount: ${primaryFont}`);
+      setFontFamily(primaryFont);
     }
   }, []); // Only run on mount
   
-  // Clear caches when font changes and apply CSS classes
+  // Clear caches when font changes
   useEffect(() => {
     fontMetricsCache.clear();
     lineCalculationCache.clear();
-  }, [selectedFont]);
+  }, []);
   
-  // Sync local font state with global settings
-  useEffect(() => {
-    if (editorSettings.fontFamily !== selectedFont) {
-      setSelectedFont(editorSettings.fontFamily);
-    }
-  }, [editorSettings.fontFamily, selectedFont]);
+  // Font is fixed to KoPubWorldBatangLight - no need to sync
 
-  // Ensure font consistency - sync selectedFont with global settings
+  // Ensure font consistency - KoPubWorldBatangLight only
   useEffect(() => {
-    const koreanFont = 'CustomFontTTF'; // 학교안심 font works well for Korean content
+    const primaryFont = 'KoPubWorldBatangLight'; // Primary font for all text
     
     // Only update if there's actually a mismatch to prevent unnecessary re-renders
-    if (editorSettings.fontFamily !== koreanFont || selectedFont !== koreanFont) {
-      console.log(`[Font Sync] Ensuring Korean font: ${koreanFont}`);
-      
-      // Update global settings only if needed
-      if (editorSettings.fontFamily !== koreanFont) {
-        setFontFamily(koreanFont);
-      }
-      
-      // Update local state only if needed
-      if (selectedFont !== koreanFont) {
-        setSelectedFont(koreanFont);
-      }
+    if (editorSettings.fontFamily !== primaryFont) {
+      console.log(`[Font Sync] Ensuring primary font: ${primaryFont}`);
+      setFontFamily(primaryFont);
     }
-  }, [editorSettings.fontFamily, selectedFont, setFontFamily]); // Removed language dependency
+  }, [editorSettings.fontFamily, setFontFamily]);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -229,26 +214,6 @@ const [showLineWarning, setShowLineWarning] = useState(false);
         </CardTitle>
         
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Font Selection */}
-          <div className="flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            <select 
-              value={selectedFont} 
-              onChange={(e) => {
-                const fontFamily = e.target.value;
-                setSelectedFont(fontFamily);
-                setFontFamily(fontFamily);
-              }}
-              className="px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {AVAILABLE_FONTS.map((font) => (
-                <option key={font.name} value={font.family}>
-                  {font.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          
           {/* Text Alignment Controls */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Align:</span>
@@ -363,7 +328,7 @@ width: `${PAGE_WIDTH}px`,
                     className="w-full h-full resize-none outline-none bg-transparent"
                     style={{
                       padding: `${PAGE_PADDING}px`,
-                      fontFamily: selectedFont,
+                      fontFamily: 'KoPubWorldBatangLight',
                       fontSize: `${FONT_SIZE}px`,
                       lineHeight: `${LINE_HEIGHT}px`,
                       color: '#333',

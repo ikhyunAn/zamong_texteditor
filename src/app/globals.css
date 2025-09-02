@@ -4,25 +4,16 @@
 
 /* Custom Font Declarations */
 
-/* 학교안심 Bold - for titles */
+/* KoPubWorld Batang Light - PRIMARY FONT for text and titles */
 @font-face {
-  font-family: 'HakgyoansimBareonbatangB';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
-  font-weight: bold;
+  font-family: 'KoPubWorldBatangLight';
+  src: url('/fonts/KoPubWorld Batang Light.ttf') format('truetype');
+  font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 
-/* 학교안심 Regular - for body text */
-@font-face {
-  font-family: 'HakgyoansimBareonbatangR';
-  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* 나눔손글씨 - for author names */
+/* 나눔손글씨 - for author names ONLY */
 @font-face {
   font-family: 'CustomFont';
   src: url('/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf') format('truetype');
@@ -31,7 +22,26 @@
   font-display: swap;
 }
 
-/* Legacy aliases for backward compatibility */
+/* LEGACY FONTS - for backward compatibility (deprecated) */
+/* 학교안심 Bold */
+@font-face {
+  font-family: 'HakgyoansimBareonbatangB';
+  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 학교안심 Regular */
+@font-face {
+  font-family: 'HakgyoansimBareonbatangR';
+  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Legacy alias */
 @font-face {
   font-family: 'CustomFontTTF';
   src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
@@ -233,28 +243,30 @@
 
 /* Custom Font Utility Classes */
 
-/* Body text - Regular weight for user-typed content */
+/* PRIMARY: KoPubWorld Batang Light - for ALL text and titles */
 .font-korean-body {
-  font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif;
+  font-family: 'KoPubWorldBatangLight', 'KoPub 바탕', 'Malgun Gothic', Arial, sans-serif;
 }
 
-/* Titles - Bold weight for titles */
 .font-korean-title {
-  font-family: 'HakgyoansimBareonbatangB', '학교안심', Arial, sans-serif;
-  font-weight: bold;
+  font-family: 'KoPubWorldBatangLight', 'KoPub 바탕', 'Malgun Gothic', Arial, sans-serif;
 }
 
-/* Author names - Special handwriting font */
+.font-korean-text {
+  font-family: 'KoPubWorldBatangLight', 'KoPub 바탕', 'Malgun Gothic', Arial, sans-serif;
+}
+
+/* Author names - Keep handwriting font */
 .font-korean-author {
-  font-family: 'CustomFont', '나눔손글씨', 'Nanum Handwriting', Arial, sans-serif;
+  font-family: 'CustomFont', '나눔손글씨', 'Nanum Handwriting', 'KoPubWorldBatangLight', Arial, sans-serif;
 }
 
-/* Legacy support for existing classes */
+/* LEGACY classes - now use KoPubWorld for consistency */
 .font-korean-regular {
-  font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif;
+  font-family: 'KoPubWorldBatangLight', 'KoPub 바탕', 'Malgun Gothic', Arial, sans-serif;
 }
 
-/* Tiptap Editor Font Override - use Regular weight for user content */
+/* Tiptap Editor Font Override - use KoPubWorld Batang Light */
 .ProseMirror {
-  font-family: 'HakgyoansimBareonbatangR', '학교안심', Arial, sans-serif !important;
+  font-family: 'KoPubWorldBatangLight', 'KoPub 바탕', 'Malgun Gothic', Arial, sans-serif !important;
 }

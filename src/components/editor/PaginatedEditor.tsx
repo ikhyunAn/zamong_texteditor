@@ -73,7 +73,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     storeUpdatePage: updatePage
   } = usePageManager();
   
-  const [selectedFont, setSelectedFont] = useState(editorSettings.fontFamily); // Use font from global settings
+  // Using only KoPubWorldBatangLight font - no font selection needed
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -108,13 +108,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     initializeWithEmptyPage();
   }, [initializeWithEmptyPage]);
 
-  // Force Korean body font on component mount (ensure consistency)
+  // Force KoPubWorld Batang Light font on component mount (ensure consistency)
   useEffect(() => {
-    const bodyFont = 'HakgyoansimBareonbatangR'; // Regular weight for body text
-    if (editorSettings.fontFamily !== bodyFont) {
-      console.log(`[Font Init] Setting Korean body font on mount: ${bodyFont}`);
-      setFontFamily(bodyFont);
-      setSelectedFont(bodyFont);
+    const primaryFont = 'KoPubWorldBatangLight'; // Primary font for all text
+    if (editorSettings.fontFamily !== primaryFont) {
+      console.log(`[Font Init] Setting primary font on mount: ${primaryFont}`);
+      setFontFamily(primaryFont);
     }
   }, []); // Only run on mount
 
@@ -126,7 +125,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding: ${PAGE_PADDING}px; font-family: ${selectedFont}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
+        style: `padding: ${PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
         contenteditable: 'true',
       },
     },
@@ -586,20 +585,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       editor.commands.setContent(htmlContent, false, { preserveWhitespace: 'full' });
     }
   }, [editor, currentPageIndex, getCurrentPageContent, pages]);
-  // Handle font change
-  const handleFontChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const fontFamily = e.target.value;
-    setSelectedFont(fontFamily);
-    
-    // Update global store settings so canvas operations use the correct font
-    setFontFamily(fontFamily);
-    
-    if (editor) {
-      // Update editor styling
-      const editorElement = editor.view.dom as HTMLElement;
-      editorElement.style.fontFamily = fontFamily;
-    }
-  };
+  // Font is fixed to KoPubWorldBatangLight - no font change handler needed
 
   // Ensure text alignment is correctly applied on render
   // This useEffect must be called before any early returns to maintain hook order
@@ -618,14 +604,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [editor, editorSettings.fontSize]);
 
-  // Sync local font state with global settings
-  useEffect(() => {
-    if (editorSettings.fontFamily !== selectedFont) {
-      setSelectedFont(editorSettings.fontFamily);
-    }
-  }, [editorSettings.fontFamily, selectedFont]);
+  // Font is fixed to KoPubWorldBatangLight - no need to sync state
 
-  // Update font family when it changes - use CSS classes for better consistency
+  // Update font family when it changes - KoPubWorldBatangLight only
   useEffect(() => {
     if (editor) {
       const editorElement = editor.view.dom as HTMLElement;
@@ -633,19 +614,10 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
       // Remove any existing font classes
       editorElement.classList.remove('font-korean-body', 'font-korean-title', 'font-korean-regular');
       
-      // Add appropriate font class based on selected font
-      if (selectedFont === 'CustomFontTTF') {
-        editorElement.classList.add('font-korean-body');
-      } else if (selectedFont === 'CustomFont') {
-        editorElement.classList.add('font-korean-title');
-      } else if (selectedFont === 'HakgyoansimBareonbatangR') {
-        editorElement.classList.add('font-korean-regular');
-      } else {
-        // Fallback to inline style for other fonts
-        editorElement.style.fontFamily = selectedFont;
-      }
+      // Use KoPubWorldBatangLight font
+      editorElement.style.fontFamily = 'KoPubWorldBatangLight';
     }
-  }, [editor, selectedFont]);
+  }, [editor]);
 
   // Update vertical alignment when it changes
   useEffect(() => {
@@ -667,25 +639,16 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
     }
   }, [editor, editorSettings.lineHeight]);
 
-  // Ensure font consistency - sync selectedFont with global settings
+  // Ensure font consistency - KoPubWorldBatangLight only
   useEffect(() => {
-    const bodyFont = 'HakgyoansimBareonbatangR'; // Regular weight for body text
+    const primaryFont = 'KoPubWorldBatangLight'; // Primary font for all text
     
     // Only update if there's actually a mismatch to prevent unnecessary re-renders
-    if (editorSettings.fontFamily !== bodyFont || selectedFont !== bodyFont) {
-      console.log(`[Font Sync] Ensuring Korean body font: ${bodyFont}`);
-      
-      // Update global settings only if needed
-      if (editorSettings.fontFamily !== bodyFont) {
-        setFontFamily(bodyFont);
-      }
-      
-      // Update local state only if needed
-      if (selectedFont !== bodyFont) {
-        setSelectedFont(bodyFont);
-      }
+    if (editorSettings.fontFamily !== primaryFont) {
+      console.log(`[Font Sync] Ensuring primary font: ${primaryFont}`);
+      setFontFamily(primaryFont);
     }
-  }, [editorSettings.fontFamily, selectedFont, setFontFamily]); // Removed language dependency
+  }, [editorSettings.fontFamily, setFontFamily]);
 
   if (!editor) {
     return (
@@ -838,23 +801,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps> = ({ className }) => {
             ))}
           </div>
         </div>
-<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Font Selection */}
-          <div className="flex items-center gap-2">
-            <Type className="w-4 h-4" />
-            <select 
-              value={selectedFont} 
-              onChange={handleFontChange} 
-              className="px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {AVAILABLE_FONTS.map((font) => (
-                <option key={font.name} value={font.family}>
-                  {font.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           {/* Synchronization Button */}
           <Button 
             onClick={handleManualSync}

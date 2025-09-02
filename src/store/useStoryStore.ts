@@ -47,7 +47,7 @@ interface StoryStore extends StoryState {
 }
 
 const defaultTextStyle: TextStyle = {
-  fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
+  fontFamily: 'KoPubWorldBatangLight', // Primary font for all text
   fontSize: 24,
   color: '#000000',
   position: { x: 50, y: 50 },
@@ -63,7 +63,7 @@ const initialState: StoryState = {
   currentStep: 0,
   currentPageIndex: 0,
   editorSettings: {
-    fontFamily: 'HakgyoansimBareonbatangR', // Regular weight for body text
+    fontFamily: 'KoPubWorldBatangLight', // Primary font for all text
     fontSize: 18,
     lineHeight: 1.5,
     textAlignment: 'left',
