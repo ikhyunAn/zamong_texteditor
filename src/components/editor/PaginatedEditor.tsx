@@ -1161,7 +1161,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
 const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ className }) => {
   const { t } = useTranslation('common');
   const { setCurrentStep, content, syncPagesToSections, pages, sections } = useStoryStore();
-  const { syncNow, isSyncing } = useSyncStatus();
+  const { syncNow } = useSyncStatus();
   
   const { showWarning, showError } = useToast();
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -1176,19 +1176,62 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
   }, []);
 
   const handleNext = async () => {
-    // Validate content
-    if (!content || content.trim() === '') {
-      showWarning(t('editor.incompleteContent'), t('editor.incompleteContentMessage'));
-      return;
-    }
-
-    // Validate pages
-    if (pages.length === 0) {
-      showWarning('No Pages', 'Please create at least one page before proceeding.');
-      return;
-    }
-
     setIsTransitioning(true);
+    
+    // PRIORITY SYNC: Always sync current editor content first
+    console.log('[Priority Sync] Starting mandatory sync before transition...');
+    
+    // Get current editor content if we have access to the editor instance
+    let currentEditorContent: string | null = null;
+    if (editorRef.current && typeof editorRef.current.getHTML === 'function') {
+      console.log('[Priority Sync] Using live editor content from editor instance');
+      const editorHtml = editorRef.current.getHTML();
+      currentEditorContent = htmlToTextWithLineBreaks(editorHtml);
+    } else {
+      console.log('[Priority Sync] Editor not available, using stored content');
+      const { getCurrentPageContent } = useStoryStore.getState();
+      currentEditorContent = getCurrentPageContent();
+    }
+    
+    // Force sync the current editor content before any validation
+    if (currentEditorContent) {
+      const { currentPageIndex, pages: currentPages } = useStoryStore.getState();
+      const currentPage = currentPages[currentPageIndex];
+      
+      console.log('[Priority Sync] Syncing editor content:', {
+        pageIndex: currentPageIndex,
+        pageId: currentPage?.id,
+        contentLength: currentEditorContent.length,
+        contentPreview: currentEditorContent.substring(0, 50) + '...'
+      });
+      
+      const prioritySyncSuccess = await syncNow(currentEditorContent, 'priority-sync-before-transition');
+      if (prioritySyncSuccess) {
+        console.log('[Priority Sync] Successfully synced current editor content');
+      } else {
+        console.warn('[Priority Sync] Failed to sync current editor content, but continuing...');
+      }
+    }
+    
+    // Now validate content after sync
+    const { content: freshContent, pages: freshPages } = useStoryStore.getState();
+    
+    // Check if we have any meaningful content after sync
+    const hasContent = freshContent && freshContent.trim() !== '';
+    const hasPages = freshPages.length > 0;
+    const hasPageContent = freshPages.some(page => page.content && page.content.trim() !== '');
+    
+    if (!hasContent && !hasPageContent) {
+      showWarning(t('editor.incompleteContent'), 'Please write some content before proceeding to preview.');
+      setIsTransitioning(false);
+      return;
+    }
+    
+    if (!hasPages) {
+      showWarning('No Pages', 'Please create at least one page before proceeding.');
+      setIsTransitioning(false);
+      return;
+    }
 
     // Get store state once at the beginning to avoid scoping issues
     const storeState = useStoryStore.getState();
@@ -1204,42 +1247,20 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
       console.log('Current sections data:', sections.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })));
       console.groupEnd();
 
-      // Step 1: Sync current editor content to current page before transition
-      console.log('[Transition] Syncing current editor content before image generation...');
+      // Step 1: Additional sync verification (priority sync already done above)
+      console.log('[Transition] Verifying sync completion before image generation...');
       
-      // Get current editor content if we have access to the editor instance
-      let currentEditorContent: string | null = null;
-      if (editorRef.current && typeof editorRef.current.getHTML === 'function') {
-        console.log('[Transition] Using live editor content from editor instance');
-        const editorHtml = editorRef.current.getHTML();
-        currentEditorContent = htmlToTextWithLineBreaks(editorHtml);
-      } else {
-        console.log('[Transition] Editor not available, using stored content');
-        const { getCurrentPageContent } = useStoryStore.getState();
-        currentEditorContent = getCurrentPageContent();
-      }
+      // At this point, priority sync has already been completed
+      // Just do a final verification of the state
+      const { currentPageIndex, pages: verifyPages } = useStoryStore.getState();
+      const verifyCurrentPage = verifyPages[currentPageIndex];
       
-      // Use fresh state for current operations
-      const { currentPageIndex, pages: currentPages } = useStoryStore.getState();
-      const currentPage = currentPages[currentPageIndex];
-      
-      console.log('[Transition] Current page index:', currentPageIndex);
-      console.log('[Transition] Current page ID:', currentPage?.id);
-      console.log('[Transition] Live editor content length:', currentEditorContent?.length || 0);
-      console.log('[Transition] Current page stored content length:', currentPage?.content?.length || 0);
-      // Check if there are unsaved editor changes that need to be synced
-      if (currentPage && currentEditorContent && currentEditorContent !== currentPage.content) {
-        console.log('[Transition] Content mismatch detected, syncing live editor content to current page');
-        console.log('[Transition] Editor content preview:', currentEditorContent.substring(0, 100) + '...');
-        console.log('[Transition] Stored content preview:', (currentPage.content || '').substring(0, 100) + '...');
-        
-      const syncSuccess = await syncNow(currentEditorContent, 'pre-transition-sync');
-        if (!syncSuccess) {
-          console.warn(t('transition.syncFailed'));
-        }
-      } else {
-        console.log('[Transition] No content changes detected, skipping pre-sync');
-      }
+      console.log('[Transition] Post-priority-sync verification:', {
+        pageIndex: currentPageIndex,
+        pageId: verifyCurrentPage?.id,
+        storedContentLength: verifyCurrentPage?.content?.length || 0,
+        storedContentPreview: (verifyCurrentPage?.content || '').substring(0, 50) + '...'
+      });
       
       // Step 2: Validate page state 
       console.log('[Transition] Validating page state after sync...');
@@ -1321,7 +1342,7 @@ const PaginatedEditorWithNavigation: React.FC<PaginatedEditorProps> = ({ classNa
         <Button
           type="button"
           onClick={handleNext}
-          disabled={isTransitioning || isSyncing}
+          disabled={isTransitioning}
           className="relative"
         >
           {isTransitioning && (
