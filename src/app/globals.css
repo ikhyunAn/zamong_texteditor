@@ -16,7 +16,7 @@
 /* 나눔손글씨 - for author names ONLY */
 @font-face {
   font-family: 'CustomFont';
-  src: url('/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf') format('truetype');
+  src: url('/fonts/author-handwriting-font.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

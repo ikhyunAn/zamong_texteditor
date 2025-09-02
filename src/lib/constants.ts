@@ -59,7 +59,7 @@ export const AVAILABLE_FONTS = [
   {
     name: '나눔손글씨',
     family: 'CustomFont',
-    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    path: '/fonts/author-handwriting-font.ttf',
     type: 'custom' as const,
     languages: ['ko'] as const,
     purpose: ['author'] as const // Used for author names only
