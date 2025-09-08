@@ -29,9 +29,6 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  AlignHorizontalJustifyStart,
-  AlignHorizontalJustifyCenter,
-  AlignHorizontalJustifyEnd,
   Plus,
   Minus,
   Check
@@ -58,7 +55,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     getCurrentPageContent,
     initializeWithEmptyPage,
     setTextAlignment,
-    setVerticalAlignment,
     setFontFamily,
     increaseFontSize,
     decreaseFontSize,
@@ -75,7 +71,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
   
   // Using only KoPubWorldBatangLight font - no font selection needed
   const [pageBreakMessage, setPageBreakMessage] = useState('');
-  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Enhanced sync status management
@@ -1077,7 +1072,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                       className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none"
                       style={{ zIndex: 11 }}
                     >
-                      Content beyond this area won't appear in images
+                      Content beyond this area won&apos;t appear in images
                     </div>
                   </div>
                 </div>

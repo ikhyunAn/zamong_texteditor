@@ -79,7 +79,7 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
       // Draw each line of the title centered
       const titleX = task.dimensions.width / 2;
       // Start at padding distance from top, not percentage-based
-      let titleY = padding + titleFontSize + 20; // Add extra 20px for top margin to match editor
+      const titleY = padding + titleFontSize + 20; // Add extra 20px for top margin to match editor
       
       titleLines.forEach((line, index) => {
         ctx.fillText(line, titleX, titleY + (index * titleFontSize * titleLineHeight));
