@@ -251,7 +251,7 @@ export function loadKoreanSystemFonts(): void {
 /* Override our two custom fonts with system fallbacks in case of loading failure */
 @font-face {
   font-family: 'CustomFont';
-  src: url('/fonts/작가폰트_나눔손글씨%20딸에게%20엄마가.ttf') format('truetype'),
+  src: url('/fonts/author-handwriting-font.ttf') format('truetype'),
        local('Malgun Gothic'), 
        local('Apple SD Gothic Neo'), 
        local('NanumGothic');

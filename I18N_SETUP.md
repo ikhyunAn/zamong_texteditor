@@ -12,7 +12,7 @@ This project has been configured with next-i18next for internationalization supp
 ## Supported Languages
 
 - English (`en`) - Default language
-- Korean (`ko`)
+- Korean (`한국어`)
 
 ## Translation Files
 

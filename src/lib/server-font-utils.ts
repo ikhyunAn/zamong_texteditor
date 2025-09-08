@@ -29,8 +29,8 @@ export const FONT_CONFIGS: FontConfig[] = [
   },
   {
     name: 'CustomFont',
-    url: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
-    path: 'public/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf'
+    url: '/fonts/author-handwriting-font.ttf',
+    path: 'public/fonts/author-handwriting-font.ttf'
   },
   {
     name: 'CustomFontTTF', // Legacy alias

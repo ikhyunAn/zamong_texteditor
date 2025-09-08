@@ -75,6 +75,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
   
   // Using only KoPubWorldBatangLight font - no font selection needed
   const [pageBreakMessage, setPageBreakMessage] = useState('');
+  const [isTextOverflowing, setIsTextOverflowing] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Enhanced sync status management
@@ -133,7 +134,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding: ${PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
+        style: `padding-left: ${PAGE_PADDING}px; padding-right: ${PAGE_PADDING}px; padding-bottom: ${PAGE_PADDING}px; padding-top: ${currentPageIndex === 0 && authorInfo.title ? '0' : PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
         contenteditable: 'true',
       },
     },
@@ -682,6 +683,39 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     }
   }, [editor, editorSettings.lineHeight]);
 
+  // Update top padding when page or title changes
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom as HTMLElement;
+      const shouldHaveTopPadding = !(currentPageIndex === 0 && authorInfo.title);
+      editorElement.style.paddingTop = shouldHaveTopPadding ? `${PAGE_PADDING}px` : '0px';
+    }
+  }, [editor, currentPageIndex, authorInfo.title]);
+
+  // Calculate available height for text content to match image generation constraints
+  const calculateAvailableTextHeight = useCallback(() => {
+    const totalPageHeight = PAGE_HEIGHT; // 1600px
+    const topPadding = 80; // pt-[80px] for title
+    const bottomPadding = PAGE_PADDING; // 60px bottom padding
+    const titleSpacing = 20; // pb-5 class (20px)
+    
+    if (currentPageIndex === 0 && authorInfo.title) {
+      // First page with title
+      // Calculate title height: 60px font size * 1.5 line height = 90px (approximate for single line)
+      // For multi-line titles, this would be larger, but we'll use a safe estimate
+      const titleFontSize = 60;
+      const titleLineHeight = 1.5;
+      const estimatedTitleHeight = titleFontSize * titleLineHeight; // ~90px for single line
+      
+      const availableHeight = totalPageHeight - topPadding - estimatedTitleHeight - titleSpacing - bottomPadding - 40;
+      return `${Math.max(availableHeight, 100)}px`; // Ensure minimum 100px
+    } else {
+      // Regular page without title
+      const availableHeight = totalPageHeight - PAGE_PADDING - bottomPadding;
+      return `${availableHeight}px`;
+    }
+  }, [currentPageIndex, authorInfo.title]);
+
   // Ensure font consistency - KoPubWorldBatangLight only
   useEffect(() => {
     const primaryFont = 'KoPubWorldBatangLight'; // Primary font for all text
@@ -760,7 +794,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
         </div>
         
         {/* Vertical Alignment Controls */}
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">{t('editor.verticalAlignment')}</span>
           <div className="flex items-center gap-1">
             <Button
@@ -796,7 +830,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
               <AlignHorizontalJustifyEnd className="w-4 h-4 rotate-90" />
             </Button>
           </div>
-        </div>
+        </div> */}
         
         {/* Font Size Controls */}
         <div className="flex items-center gap-2">
@@ -1000,7 +1034,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                   {/* Non-editable title section - only show on first page */}
                   {currentPageIndex === 0 && authorInfo.title && (
                     <div 
-                      className="px-[60px] pt-[60px] pb-5"
+                      className="px-[60px] pt-[80px] pb-5"
                       style={{
                         fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
                         fontSize: '60px',
@@ -1016,13 +1050,35 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                   )}
                   
                   {/* Editor content with adjusted padding */}
-                  <div style={{
-                    paddingTop: currentPageIndex === 0 && authorInfo.title ? '0' : undefined,
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}>
+                  <div 
+                    className="relative"
+                    style={{
+                      paddingTop: currentPageIndex === 0 && authorInfo.title ? '0' : undefined,
+                      height: calculateAvailableTextHeight(),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden' // Prevent scrolling beyond the visible area
+                    }}
+                  >
                     <EditorContent editor={editor} />
+                    
+                    {/* Visual indicator when approaching text limit */}
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                      style={{
+                        height: '40px',
+                        background: 'linear-gradient(transparent, rgba(255, 255, 255, 0.8))',
+                        zIndex: 10
+                      }}
+                    />
+                    
+                    {/* Text limit warning */}
+                    <div 
+                      className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none"
+                      style={{ zIndex: 11 }}
+                    >
+                      Content beyond this area won't appear in images
+                    </div>
                   </div>
                 </div>
               </div>

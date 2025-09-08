@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 // Default Text Styles
 export const DEFAULT_TEXT_STYLE = {
   fontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for body text
-  fontSize: 36,
+  fontSize: 32,
   color: '#000000',
   position: { x: 50, y: 50 },
   alignment: 'center' as const,
@@ -22,25 +22,25 @@ export const DEFAULT_BACKGROUND_IMAGE = '/backgrounds/stage_3.png';
 export const DEFAULT_BACKGROUNDS = [
   {
     id: 'stage_1',
-    name: 'Stage 1',
+    name: '♥ 0회',
     path: '/backgrounds/stage_1.png',
     description: 'First stage background'
   },
   {
     id: 'stage_2',
-    name: 'Stage 2',
+    name: '♥ 1회',
     path: '/backgrounds/stage_2.png',
     description: 'Second stage background'
   },
   {
     id: 'stage_3',
-    name: 'Stage 3',
+    name: '♥ 2회',
     path: '/backgrounds/stage_3.png',
     description: 'Third stage background'
   },
   {
     id: 'stage_4',
-    name: 'Stage 4',
+    name: '♥ 3회 이상',
     path: '/backgrounds/stage_4.png',
     description: 'Fourth stage background'
   }
@@ -110,8 +110,8 @@ export const TEXT_COLORS = [
 // Default editor settings
 export const EDITOR_SETTINGS = {
   maxLines: 25,
-  lineHeight: 1.5,
-  fontSize: 16,
+  lineHeight: 1.8,
+  fontSize: 32,
   fontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for body text
   titleFontFamily: 'KoPubWorldBatangLight', // KoPubWorld Batang Light for titles
   authorFontFamily: 'CustomFont', // Author name font - 나눔손글씨 (문체 유지)
@@ -132,10 +132,9 @@ export const EDITOR_SETTINGS = {
 
 // Line height options
 export const LINE_HEIGHT_OPTIONS = [
-  { label: 'Tight (1.2)', value: 1.2 },
-  { label: 'Normal (1.5)', value: 1.5 },
-  { label: 'Loose (1.8)', value: 1.8 },
-  { label: 'Extra Loose (2.0)', value: 2.0 }
+  { label: 'Normal (1.8)', value: 1.8 },
+  { label: 'Loose (2.0)', value: 2.0 },
+  { label: 'Extra Loose (2.2)', value: 2.2 }
 ];
 
 // Standard image dimensions (900 × 1600 pixels)

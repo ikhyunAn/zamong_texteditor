@@ -7,9 +7,10 @@ import { AuthorInfoForm } from '@/components/layout/AuthorInfoForm';
 import PaginatedEditorWithNavigation from '@/components/editor/PaginatedEditor';
 import { BatchImageGenerator } from '@/components/canvas/BatchImageGenerator';
 // import { ProgressStepper } from '@/components/layout/ProgressStepper';
-import { useToast } from '@/hooks/useToast';
-import { ToastContainer } from '@/components/ui/toast';
+// import { useToast } from '@/hooks/useToast';
+// import { ToastContainer } from '@/components/ui/toast';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { NotificationSection } from '@/components/ui/NotificationSection';
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
@@ -52,7 +53,7 @@ export default function Home() {
 function HomeContent() {
   const { t } = useTranslation('common');
   const { currentStep } = useStoryStore();
-  const { messages, removeToast } = useToast();
+  // const { messages, removeToast } = useToast();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [displayStep, setDisplayStep] = useState(currentStep);
 
@@ -142,6 +143,7 @@ function HomeContent() {
           </div>
         </div>
         
+        
         <div 
           className={`mt-8 transition-all duration-300 ease-in-out ${
             isTransitioning ? 'opacity-0 transform translate-y-4' : 'opacity-100 transform translate-y-0'
@@ -149,9 +151,14 @@ function HomeContent() {
         >
           {renderCurrentStep()}
         </div>
+
+        <div className="mt-12" />
+
+          {/* Notification Section */}
+          <NotificationSection />
       </div>
       
-      <ToastContainer messages={messages} onClose={removeToast} />
+      {/* <ToastContainer messages={messages} onClose={removeToast} /> */}
     </div>
   );
 }

@@ -48,7 +48,7 @@ interface StoryStore extends StoryState {
 
 const defaultTextStyle: TextStyle = {
   fontFamily: 'KoPubWorldBatangLight', // Primary font for all text
-  fontSize: 24,
+  fontSize: 32,
   color: '#000000',
   position: { x: 50, y: 50 },
   alignment: 'center',
@@ -64,7 +64,7 @@ const initialState: StoryState = {
   currentPageIndex: 0,
   editorSettings: {
     fontFamily: 'KoPubWorldBatangLight', // Primary font for all text
-    fontSize: 26,
+    fontSize: 32,
     lineHeight: 1.8,
     textAlignment: 'left',
     globalTextAlignment: 'left', // Default to left for backward compatibility

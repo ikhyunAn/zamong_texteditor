@@ -45,7 +45,7 @@ export async function loadFontForCanvas(
 export async function loadCustomFonts(): Promise<void> {
   const fonts: FontConfig[] = [
     { name: 'KoPubWorldBatangLight', url: '/fonts/KoPubWorld Batang Light.ttf' }, // PRIMARY: Text and titles
-    { name: 'CustomFont', url: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf' }, // Author names
+    { name: 'CustomFont', url: '/fonts/author-handwriting-font.ttf' }, // Author names
     // Legacy fonts for backward compatibility
     { name: 'HakgyoansimBareonbatangB', url: '/fonts/HakgyoansimBareonbatangB.ttf' }, // Legacy Bold
     { name: 'HakgyoansimBareonbatangR', url: '/fonts/HakgyoansimBareonbatangR.ttf' }, // Legacy Regular

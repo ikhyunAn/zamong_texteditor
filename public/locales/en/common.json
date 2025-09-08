@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Zamong Text Editor",
-    "subtitle": "Transform your stories into beautiful Storycards",
+    "subtitle": "Make an image of an anonymous letter to send to the reader",
     "loading": "Loading application..."
   },
   "steps": {
@@ -11,7 +11,7 @@
   },
   "authorForm": {
     "title": "Get Started",
-    "description": "Enter your information to begin creating your Instagram story posts",
+    "description": "Enter author information",
     "nameLabel": "Your Name",
     "namePlaceholder": "Enter your name",
     "storyTitleLabel": "Story Title",
@@ -111,5 +111,14 @@
     "toggle": "Toggle Language",
     "current": "EN",
     "switchTo": "한국어"
+  },
+  "notifications": {
+    "howToUse": {
+      "title": "Editor Usage Notice",
+      "items": {
+        "0": "Section separation (double line break): After pressing Enter, insert a space to create a blank line.",
+        "1": "If the text is longer than 600 characters, check if the bottom part is cut off. If so, add a new page and move the content there."
+      }
+    }
   }
 }

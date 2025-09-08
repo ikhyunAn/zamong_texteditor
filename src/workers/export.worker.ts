@@ -57,15 +57,15 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
     // Configure text style - prioritize editorSettings over textStyle
     const fontSize = task.editorSettings?.fontSize || task.textStyle.fontSize || 24;
     const fontFamily = task.editorSettings?.fontFamily || task.textStyle.fontFamily || 'Arial';
-    const lineHeight = task.editorSettings?.lineHeight || 1.5;
+    const lineHeight = task.editorSettings?.lineHeight || 1.8;
     const padding = 80;
 
-    let startY = padding + fontSize;
+    let startY = padding + fontSize + 20; // Add extra 20px for top margin to match editor
     
     // Add title on the first page if present
     if (task.pageNumber === 1 && task.title) {
-      const titleFontSize = Math.max(fontSize + 6, 28);
-      const titleLineHeight = 1.5; // Use consistent line height
+      const titleFontSize = 60; // Fixed 60px to match editor title
+      const titleLineHeight = 1.8; // Use consistent line height to match editor (1.8)
       
       // Configure title styling
       ctx.font = `bold ${titleFontSize}px ${fontFamily}`;
@@ -78,8 +78,8 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
       
       // Draw each line of the title centered
       const titleX = task.dimensions.width / 2;
-      // eslint-disable-next-line prefer-const
-      let titleY = task.dimensions.height * 0.05 + titleFontSize; // Start near top
+      // Start at padding distance from top, not percentage-based
+      let titleY = padding + titleFontSize + 20; // Add extra 20px for top margin to match editor
       
       titleLines.forEach((line, index) => {
         ctx.fillText(line, titleX, titleY + (index * titleFontSize * titleLineHeight));
@@ -87,7 +87,7 @@ async function processExportTask(task: ExportTask): Promise<ExportResult> {
       
       // Adjust content start position to be below all title lines
       const totalTitleHeight = titleLines.length * titleFontSize * titleLineHeight;
-      startY = titleY + totalTitleHeight + 20; // Add spacing after title
+      startY = titleY + totalTitleHeight + 20; // Add 20px spacing to match editor's pb-5 class
     }
 
     // Configure text style for content

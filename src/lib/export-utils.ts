@@ -72,7 +72,7 @@ async function generateImageWithBackground(
       // Add story title to the first image
       if (pageNumber === 1 && title) {
         const titleFontSize = Math.max((editorSettings?.fontSize || textStyle.fontSize) + 6, 28);
-        const titleLineHeight = editorSettings?.lineHeight || 1.2;
+        const titleLineHeight = editorSettings?.lineHeight || 1.8;
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         titleElement = new (fabric as any).Textbox(title, {
@@ -105,7 +105,7 @@ async function generateImageWithBackground(
         fontFamily: editorSettings?.fontFamily || textStyle.fontFamily,
         fill: textStyle.color,
         textAlign: globalAlignment || textStyle.alignment,
-        lineHeight: editorSettings?.lineHeight || 1.5,
+        lineHeight: editorSettings?.lineHeight || 1.8,
         splitByGrapheme: true,
         selectable: false,
         evented: false

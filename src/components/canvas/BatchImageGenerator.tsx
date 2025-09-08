@@ -130,7 +130,7 @@ export function BatchImageGenerator() {
         
         // Check if this is the first page (pageNumber === 1)
         const isFirstPage = pageNumber === 1;
-        const topOffset = MARGIN;
+        const topOffset = MARGIN + 20; // Add 20px to match editor's increased top padding
         
         // Store reference to title element for later positioning calculations
         let titleElement: unknown = null;
@@ -171,7 +171,7 @@ export function BatchImageGenerator() {
           left: contentLeft,
           top: topOffset,
           width: contentWidth,
-          fontSize: textStyle.fontSize,
+          fontSize: editorSettings.fontSize || textStyle.fontSize, // Prioritize editorSettings like export worker
           fontFamily: textStyle.fontFamily,
           fill: textStyle.color,
           textAlign: textStyle.alignment,
@@ -185,8 +185,8 @@ export function BatchImageGenerator() {
         (canvas as unknown as { add: (obj: unknown) => void }).add(text);
         
         // Add writer's name for stage 4, last page only
-        // const isLastPage = pageNumber === sections.length;
-        if ( backgroundId === 'stage_4' && authorInfo.name) {
+        const isLastPage = pageNumber === sections.length;
+        if ( isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
           const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
@@ -214,7 +214,7 @@ export function BatchImageGenerator() {
             const titleSpacing = 20; // Space between title and body text
             
             // Calculate where body text should start (after title + spacing)
-            const bodyTextTop = MARGIN + actualTitleHeight + titleSpacing;
+            const bodyTextTop = topOffset + actualTitleHeight + titleSpacing;
             
             // Reposition the body text to start after the title
             (text as unknown as { set: (props: unknown) => void }).set({ top: bodyTextTop });
@@ -226,7 +226,7 @@ export function BatchImageGenerator() {
           const textEl = text as unknown as { calcTextHeight?: () => number; height?: number };
           const textHeight = (textEl.calcTextHeight && textEl.calcTextHeight()) || textEl.height || 0;
           let totalContentHeight = textHeight;
-          const contentStartTop = MARGIN;
+          const contentStartTop = topOffset;
           
           if (isFirstPage && authorInfo.title && titleElement) {
             const titleEl = titleElement as unknown as { calcTextHeight?: () => number; height?: number };

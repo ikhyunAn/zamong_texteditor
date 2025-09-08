@@ -42,7 +42,7 @@ export const CLOUD_FONT_CONFIGS: CloudFontConfig[] = [
   },
   {
     name: 'CustomFont',
-    filename: '작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    filename: 'author-handwriting-font.ttf',
     displayName: 'Nanum Handwriting (나눔손글씨)',
     purpose: 'author',
     fallbacks: ['KoPubWorldBatangLight', 'Malgun Gothic', 'Apple SD Gothic Neo', 'cursive', 'sans-serif']

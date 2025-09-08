@@ -37,11 +37,11 @@ y += actualLineSpacing;
 **Key Changes:**
 ```typescript
 // Title text
-const titleLineHeight = editorSettings?.lineHeight || 1.2;
+const titleLineHeight = editorSettings?.lineHeight || 1.8;
 lineHeight: titleLineHeight,
 
 // Content text  
-lineHeight: editorSettings?.lineHeight || 1.5,
+lineHeight: editorSettings?.lineHeight || 1.8,
 ```
 
 ### 3. Canvas Utils (`src/lib/canvas-utils.ts`)
@@ -59,7 +59,7 @@ export function calculateOptimalFontSize(
   maxHeight: number,
   minFontSize: number = 16,
   maxFontSize: number = 72,
-  lineHeight: number = 1.5  // New parameter
+  lineHeight: number = 1.8  // New parameter
 ): number {
   // Calculate actual line spacing using fontSize * lineHeight
   const actualLineSpacing = fontSize * lineHeight;
@@ -102,16 +102,16 @@ This ensures:
 
 Default lineHeight values used when not specified:
 - **Fabric.js Textbox**: Uses `editorSettings.lineHeight` (from store)
-- **Manual canvas rendering**: Falls back to `1.5` if not available
-- **Export worker**: Uses `1.5` as ultimate fallback
-- **Title text**: Uses `1.2` for more compact title spacing
+- **Manual canvas rendering**: Falls back to `1.8` if not available
+- **Export worker**: Uses `1.8` as ultimate fallback
+- **Title text**: Uses `1.8` for consistent spacing
 
 ### Priority Order
 
 The system respects the following priority for lineHeight values:
 1. `editorSettings.lineHeight` (from global editor settings)
 2. `textStyle.lineHeight` (from individual text style)
-3. Default fallback values (1.5 for content, 1.2 for titles)
+3. Default fallback values (1.8 for both content and titles)
 
 ## Testing
 

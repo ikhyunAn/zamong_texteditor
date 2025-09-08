@@ -190,7 +190,7 @@ export function addTextToCanvas(
     // Use editorSettings for fontSize and fontFamily if available, otherwise fall back to textStyle
     const fontSize = editorSettings?.fontSize || textStyle.fontSize;
     let fontFamily = editorSettings?.fontFamily || textStyle.fontFamily;
-    const lineHeight = editorSettings?.lineHeight || 1.5;
+    const lineHeight = editorSettings?.lineHeight || 1.8;
     
     // Determine font weight based on text type (title vs body)
     if (config.isTitle) {
@@ -408,7 +408,7 @@ export function calculateOptimalFontSize(
   maxHeight: number,
   minFontSize: number = 16,
   maxFontSize: number = 72,
-  lineHeight: number = 1.5
+  lineHeight: number = 1.8
 ): number {
   let fontSize = maxFontSize;
   
