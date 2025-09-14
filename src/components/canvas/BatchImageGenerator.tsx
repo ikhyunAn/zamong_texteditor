@@ -162,6 +162,7 @@ export function BatchImageGenerator() {
         // When using line height > 1, double newlines create too much space
         // Convert double newlines to single newlines to maintain paragraph separation
         // without excessive spacing when combined with line height multiplier
+        // FIXME: Fix this logic so as to not require authors to enter space for empty line
         if (lineHeight > 1.0) {
           // Replace multiple consecutive newlines with single newline
           textContent = textContent.replace(/\n{2,}/g, '\n');
