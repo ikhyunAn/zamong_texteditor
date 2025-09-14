@@ -130,7 +130,7 @@ export function BatchImageGenerator() {
         
         // Check if this is the first page (pageNumber === 1)
         const isFirstPage = pageNumber === 1;
-        const topOffset = MARGIN + 20; // Add 20px to match editor's increased top padding
+        const topOffset = MARGIN + 60; // Add 20px to match editor's increased top padding
         
         // Store reference to title element for later positioning calculations
         let titleElement: unknown = null;
@@ -191,7 +191,7 @@ export function BatchImageGenerator() {
           const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
-            fontSize: 40,
+            fontSize: 55,
             fontFamily: ((window as unknown as { _canvasFonts?: { author?: string } })._canvasFonts?.author) || getBestCanvasFont('author'), // Use verified canvas font for author
             fill: '#000000',
             textAlign: 'right',
@@ -212,7 +212,7 @@ export function BatchImageGenerator() {
             // Get the actual height of the rendered title
             const titleEl = titleElement as unknown as { calcTextHeight?: () => number; height?: number };
             const actualTitleHeight = (titleEl.calcTextHeight && titleEl.calcTextHeight()) || titleEl.height || (60 * 1.5);
-            const titleSpacing = 20; // Space between title and body text
+            const titleSpacing = 60; // Space between title and body text
             
             // Calculate where body text should start (after title + spacing)
             const bodyTextTop = topOffset + actualTitleHeight + titleSpacing;

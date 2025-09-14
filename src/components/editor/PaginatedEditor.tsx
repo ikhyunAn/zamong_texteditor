@@ -1061,8 +1061,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                     <div 
                       className="absolute bottom-0 left-0 right-0 pointer-events-none"
                       style={{
-                        height: '40px',
-                        background: 'linear-gradient(transparent, rgba(255, 255, 255, 0.8))',
+                        height: '200px',
+                        background: 'rgba(255, 255, 255, 0.8)',
                         zIndex: 10
                       }}
                     />
@@ -1070,9 +1070,9 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                     {/* Text limit warning */}
                     <div 
                       className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none"
-                      style={{ zIndex: 11 }}
+                      style={{ zIndex: 11, fontSize: '25px' }}
                     >
-                      Content beyond this area won&apos;t appear in images
+                    주의: 해당 라인 이후로는 이미지에 표시되지 않습니다
                     </div>
                   </div>
                 </div>

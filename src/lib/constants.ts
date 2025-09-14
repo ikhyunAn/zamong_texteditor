@@ -22,25 +22,25 @@ export const DEFAULT_BACKGROUND_IMAGE = '/backgrounds/stage_3.png';
 export const DEFAULT_BACKGROUNDS = [
   {
     id: 'stage_1',
-    name: '♥ 0회',
+    name: '좋아요 0회',
     path: '/backgrounds/stage_1.png',
     description: 'First stage background'
   },
   {
     id: 'stage_2',
-    name: '♥ 1회',
+    name: '좋아요 1회',
     path: '/backgrounds/stage_2.png',
     description: 'Second stage background'
   },
   {
     id: 'stage_3',
-    name: '♥ 2회',
+    name: '좋아요 2회',
     path: '/backgrounds/stage_3.png',
     description: 'Third stage background'
   },
   {
     id: 'stage_4',
-    name: '♥ 3회 이상',
+    name: '좋아요 3회 이상',
     path: '/backgrounds/stage_4.png',
     description: 'Fourth stage background'
   }
