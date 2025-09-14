@@ -414,12 +414,13 @@ export function BatchImageGenerator() {
     
     try {
       const zip = new JSZip();
-      const folderName = `${authorInfo.name.replace(/\s+/g, '_')}_${authorInfo.title.replace(/\s+/g, '_')}`;
+      const folderName = `${authorInfo.name.replace(/\s+/g, '')}_${authorInfo.title.replace(/\s+/g, '')}`;
       let currentProgress = 0;
-      
+
       // Create folders for each background stage
       for (const background of DEFAULT_BACKGROUNDS) {
-        const stageFolder = zip.folder(`${folderName}/${background.name.replace(/\s+/g, '_')}`);
+        console.log('background: ', background);
+        const stageFolder = zip.folder(`${folderName}/${background.name.replace('회', '').replace(' 이상', '')}`);
         if (!stageFolder) {
           throw new Error(t('export.errors.folderCreationFailed', { background: background.name }));
         }
@@ -444,7 +445,7 @@ export function BatchImageGenerator() {
             const blob = await response.blob();
             
             // Add to zip
-            const fileName = `${authorInfo.title.replace(/\s+/g, '_')}_Page_${pageIndex + 1}.png`;
+            const fileName = `${authorInfo.name.replace(/\s+/g, '_')}_${authorInfo.title.replace(/\s+/g, '')}_${background.name.replace('좋아요 ', '').replace('회', '').replace(' 이상', '')}_${pageIndex + 1}.png`;
             stageFolder.file(fileName, blob);
             
             // Clean up blob URL
