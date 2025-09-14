@@ -37,53 +37,6 @@ class PaginationValidator {
   }
 
   /**
-   * Validates page data integrity
-   */
-  validatePages(pages: Page[]): PageValidationResult {
-    const result: PageValidationResult = {
-      isValid: true,
-      errors: [],
-      warnings: []
-    };
-
-    if (!Array.isArray(pages)) {
-      result.isValid = false;
-      result.errors.push('Pages must be an array');
-      return result;
-    }
-
-    pages.forEach((page, index) => {
-      if (!page) {
-        result.isValid = false;
-        result.errors.push(`Page at index ${index} is null or undefined`);
-        return;
-      }
-
-      if (!page.id) {
-        result.isValid = false;
-        result.errors.push(`Page at index ${index} is missing an ID`);
-      }
-
-      if (typeof page.content !== 'string') {
-        result.warnings.push(`Page ${page.id} has non-string content`);
-      }
-
-      // Check for duplicate IDs
-      const duplicateIndex = pages.findIndex((p, i) => i !== index && p?.id === page.id);
-      if (duplicateIndex !== -1) {
-        result.isValid = false;
-        result.errors.push(`Duplicate page ID '${page.id}' found at indices ${index} and ${duplicateIndex}`);
-      }
-    });
-
-    if (this.debugMode) {
-      this.logValidationResult('Page Validation', result);
-    }
-
-    return result;
-  }
-
-  /**
    * Validates navigation parameters
    */
   validateNavigation(currentIndex: number, targetIndex: number, totalPages: number): PageValidationResult {
@@ -169,42 +122,6 @@ class PaginationValidator {
   }
 
   /**
-   * Detects potential pagination issues
-   */
-  detectAnomalies(pages: Page[]): string[] {
-    const anomalies: string[] = [];
-
-    // Check for empty pages in the middle
-    const emptyMiddlePages = pages
-      .slice(0, -1) // Exclude last page (can be empty)
-      .map((page, index) => ({ page, index }))
-      .filter(({ page }) => !page?.content?.trim())
-      .map(({ index }) => index + 1);
-
-    if (emptyMiddlePages.length > 0) {
-      anomalies.push(`Empty pages detected in middle positions: ${emptyMiddlePages.join(', ')}`);
-    }
-
-    // Check for extremely large content on single pages
-    const largePagesThreshold = 10000; // characters
-    const largePages = pages
-      .map((page, index) => ({ contentLength: page?.content?.length || 0, index }))
-      .filter(({ contentLength }) => contentLength > largePagesThreshold)
-      .map(({ index }) => index + 1);
-
-    if (largePages.length > 0) {
-      anomalies.push(`Unusually large pages detected: ${largePages.join(', ')}`);
-    }
-
-    // Check for rapid page creation (potential infinite loop)
-    if (pages.length > 50) {
-      anomalies.push(`High page count detected: ${pages.length} pages`);
-    }
-
-    return anomalies;
-  }
-
-  /**
    * Gets recent navigation history for debugging
    */
   getNavigationHistory(limit: number = 10): NavigationLog[] {
@@ -246,7 +163,6 @@ class PaginationValidator {
 export const paginationValidator = PaginationValidator.getInstance();
 
 // Export utility functions
-export const validatePages = (pages: Page[]) => paginationValidator.validatePages(pages);
 export const validateNavigation = (current: number, target: number, total: number) => 
   paginationValidator.validateNavigation(current, target, total);
 export const logNavigation = (action: string, from: number, to: number, success: boolean, error?: string) =>
@@ -257,6 +173,3 @@ export const logPageState = (label: string, state: {
   pages: Page[];
   currentPageContent?: string;
 }) => paginationValidator.logPageState(label, state);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const detectAnomalies = (pages: Page[], _currentIndex: number) => 
-  paginationValidator.detectAnomalies(pages);

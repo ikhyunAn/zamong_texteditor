@@ -96,7 +96,7 @@ export async function analyzeFontSystem(): Promise<FontSystemInfo> {
     fonts: debugInfo
   };
   
-  console.log(`🔍 Analyzing font system in ${environment} environment...`);
+  // console.log(`🔍 Analyzing font system in ${environment} environment...`);
   
   // Test each font configuration
   for (const config of FONT_CONFIGS) {

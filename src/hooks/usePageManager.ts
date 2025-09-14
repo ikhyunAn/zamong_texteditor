@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useStoryStore } from '../store/useStoryStore';
 import { StorySection, Page } from '../types';
-import { validatePages, validateNavigation, logNavigation, logPageState, detectAnomalies } from '../lib/pagination-validation';
+import { validateNavigation, logNavigation, logPageState } from '../lib/pagination-validation';
 import { useToast } from './useToast';
 
 export const usePageManager = () => {
@@ -114,45 +114,45 @@ export const usePageManager = () => {
     };
   }, [sections]);
 
-  // Update pages when content changes - DISABLED to prevent conflicts with manual page management
-  // This effect was causing pages to be regenerated from sections, overwriting manually created pages
-  useEffect(() => {
-    console.log('[usePageManager.useEffect] Effect triggered with:', {
-      sectionsLength: sections.length,
-      pagesLength: pages.length,
-      sections: sections,
-      pages: pages.map(p => ({ id: p.id, contentLength: p.content.length }))
-    });
+  // // Update pages when content changes - DISABLED to prevent conflicts with manual page management
+  // // This effect was causing pages to be regenerated from sections, overwriting manually created pages
+  // useEffect(() => {
+  //   console.log('[usePageManager.useEffect] Effect triggered with:', {
+  //     sectionsLength: sections.length,
+  //     pagesLength: pages.length,
+  //     sections: sections,
+  //     pages: pages.map(p => ({ id: p.id, contentLength: p.content.length }))
+  //   });
     
-    // Only auto-generate pages from sections if there are no manually created pages
-    // and we have sections but no pages (initial state)
-    if (sections.length > 0 && pages.length === 0) {
-      console.log('[usePageManager] Auto-generating initial pages from sections');
-      const newPages = splitIntoPages(sections);
+  //   // Only auto-generate pages from sections if there are no manually created pages
+  //   // and we have sections but no pages (initial state)
+  //   if (sections.length > 0 && pages.length === 0) {
+  //     console.log('[usePageManager] Auto-generating initial pages from sections');
+  //     const newPages = splitIntoPages(sections);
       
-      // Runtime validation of new pages
-      const validationResult = validatePages(newPages);
-      if (!validationResult.isValid) {
-        console.error('[usePageManager] Page validation failed:', validationResult.errors);
-      }
+  //     // Runtime validation of new pages
+  //     const validationResult = validatePages(newPages);
+  //     if (!validationResult.isValid) {
+  //       console.error('[usePageManager] Page validation failed:', validationResult.errors);
+  //     }
       
-      // Detect potential anomalies
-      const anomalies = detectAnomalies(newPages, currentPageIndex);
-      if (anomalies.length > 0) {
-        console.warn('[usePageManager] Pagination anomalies detected:', anomalies);
-      }
+  //     // Detect potential anomalies
+  //     const anomalies = detectAnomalies(newPages, currentPageIndex);
+  //     if (anomalies.length > 0) {
+  //       console.warn('[usePageManager] Pagination anomalies detected:', anomalies);
+  //     }
       
-      setPages(newPages);
+  //     setPages(newPages);
       
-      // Enhanced debugging with state logging
-      logPageState('Pages Updated', {
-        currentPageIndex,
-        totalPages: newPages.length,
-        pages: newPages,
-        currentPageContent: newPages[currentPageIndex]?.content
-      });
-    }
-  }, [sections, splitIntoPages, setPages, currentPageIndex, pages]);
+  //     // Enhanced debugging with state logging
+  //     logPageState('Pages Updated', {
+  //       currentPageIndex,
+  //       totalPages: newPages.length,
+  //       pages: newPages,
+  //       currentPageContent: newPages[currentPageIndex]?.content
+  //     });
+  //   }
+  // }, [sections, splitIntoPages, setPages, currentPageIndex, pages]);
 
   // Get current page content (returns page object)
   const getCurrentPage = useCallback(() => {
