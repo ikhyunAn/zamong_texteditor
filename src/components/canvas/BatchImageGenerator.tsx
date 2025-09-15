@@ -30,6 +30,103 @@ const EXPORT_DIMENSIONS = {
   height: 1600
 };
 
+// Utility: Wrap text using DOM layout to mirror editor wrapping across font sizes
+// This ensures line breaks in canvas match CSS wrapping for the same width/font settings.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function wrapTextUsingDOM(
+  text: string,
+  options: {
+    width: number;
+    fontFamily: string;
+    fontSize: number;
+    lineHeight: number;
+    textAlign: 'left' | 'center' | 'right';
+  }
+): string {
+  if (typeof document === 'undefined') return text;
+
+  // Simple cache to reduce repeated DOM layout work
+  const cacheKey = `${options.fontFamily}|${options.fontSize}|${options.lineHeight}|${options.textAlign}|${Math.floor(options.width)}|${text}`;
+  (wrapTextUsingDOM as any)._cache = (wrapTextUsingDOM as any)._cache || new Map<string, string>();
+  const cache: Map<string, string> = (wrapTextUsingDOM as any)._cache;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  // Create offscreen container
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.visibility = 'hidden';
+  container.style.pointerEvents = 'none';
+  container.style.width = `${Math.max(0, Math.floor(options.width))}px`;
+  container.style.whiteSpace = 'pre-wrap';
+  container.style.wordBreak = 'normal';
+  container.style.fontFamily = options.fontFamily;
+  container.style.fontSize = `${options.fontSize}px`;
+  container.style.lineHeight = String(options.lineHeight);
+  container.style.textAlign = options.textAlign;
+
+  document.body.appendChild(container);
+
+  // Helper to compute line breaks for a single segment (no explicit newlines inside)
+  const computeLines = (segment: string): string[] => {
+    if (!segment) return [''];
+    container.innerHTML = '';
+
+    // Build spans for each grapheme (approximate using code points)
+    // This is sufficient for Korean text as per your constraint.
+    for (const ch of segment) {
+      const span = document.createElement('span');
+      span.textContent = ch;
+      container.appendChild(span);
+    }
+
+    const lines: string[] = [];
+    let currentLine: string[] = [];
+    let prevTop: number | null = null;
+
+    const children = Array.from(container.childNodes) as HTMLElement[];
+    for (const node of children) {
+      const el = node as HTMLElement;
+      const top = el.offsetTop;
+      if (prevTop === null) {
+        prevTop = top;
+      }
+      if (top !== prevTop) {
+        // New visual line detected
+        lines.push(currentLine.join(''));
+        currentLine = [];
+        prevTop = top;
+      }
+      currentLine.push(el.textContent || '');
+    }
+    // Push last line
+    lines.push(currentLine.join(''));
+
+    // Clean up for next segment
+    container.innerHTML = '';
+    return lines;
+  };
+
+  // Split by explicit newlines to preserve author-entered breaks
+  const segments = text.split('\n');
+  const resultLines: string[] = [];
+  segments.forEach((seg) => {
+    const segLines = computeLines(seg);
+    for (let i = 0; i < segLines.length; i++) {
+      resultLines.push(segLines[i]);
+    }
+  });
+
+  // Remove container
+  if (container.parentNode) container.parentNode.removeChild(container);
+
+  const rewrapped = resultLines.join('\n');
+  cache.set(cacheKey, rewrapped);
+  return rewrapped;
+}
+
 // Types for the preview system
 interface PreviewImage {
   pageIndex: number;
@@ -109,6 +206,16 @@ export function BatchImageGenerator() {
       
       console.log('[Canvas] Canvas fonts selected:', canvasFonts);
       (window as unknown as { _canvasFonts?: unknown })._canvasFonts = canvasFonts;
+
+      // Ensure CSS fonts are ready before canvas operations to avoid wrap drift
+      try {
+        if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+          await (document as any).fonts.ready;
+        }
+      } catch (e) {
+        console.warn('[Canvas] document.fonts.ready wait failed, proceeding with fallbacks:', e);
+      }
+
       const canvasElement = document.createElement('canvas');
       // Type assertion for fabric.js Canvas constructor
       const canvas = new (fabric as unknown as { Canvas: new (el: HTMLCanvasElement, options?: unknown) => unknown }).Canvas(canvasElement, {
@@ -125,7 +232,9 @@ export function BatchImageGenerator() {
         
         // Use consistent margins with the editor (60px padding)
         const MARGIN = 60;
-        const contentWidth = EXPORT_DIMENSIONS.width - (MARGIN * 2);
+        const contentWidth = Math.floor(EXPORT_DIMENSIONS.width - (MARGIN * 2)) - 11;
+        // If you still observe canvas wrapping later than the editor, consider subtracting 1px:
+        // const contentWidth = Math.floor(EXPORT_DIMENSIONS.width - (MARGIN * 2)) - 1;
         const contentLeft = MARGIN;
         
         // Check if this is the first page (pageNumber === 1)
@@ -168,18 +277,28 @@ export function BatchImageGenerator() {
           textContent = textContent.replace(/\n{2,}/g, '\n');
         }
         
-        const text = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(textContent, {
+        // Re-wrap text using DOM layout to mirror editor across font sizes
+        const rewrapped = wrapTextUsingDOM(textContent, {
+          width: contentWidth,
+          fontFamily: ((window as unknown as { _canvasFonts?: { body?: string } })._canvasFonts?.body) || getBestCanvasFont('body'),
+          fontSize: editorSettings.fontSize || textStyle.fontSize,
+          lineHeight: lineHeight,
+          textAlign: textStyle.alignment
+        });
+
+        const text = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(rewrapped, {
           left: contentLeft,
           top: topOffset,
           width: contentWidth,
           fontSize: editorSettings.fontSize || textStyle.fontSize, // Prioritize editorSettings like export worker
-          fontFamily: textStyle.fontFamily,
+          fontFamily: ((window as unknown as { _canvasFonts?: { body?: string } })._canvasFonts?.body) || getBestCanvasFont('body'),
           fill: textStyle.color,
           textAlign: textStyle.alignment,
           lineHeight: lineHeight,
           splitByGrapheme: true,
           selectable: false,
-          evented: false
+          evented: false,
+          padding: 0
         });
 
         // Add text to canvas first so Fabric.js can calculate dimensions
