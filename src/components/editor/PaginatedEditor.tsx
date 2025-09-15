@@ -1072,7 +1072,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                       className="absolute bottom-12 right-2 text-xs text-gray-600 pointer-events-none"
                       style={{ zIndex: 11, fontSize: '25px' }}
                     >
-                    주의: 해당 블럭 이후로는 이미지에 표시되지 않습니다
+                    주의: 해당 블럭부터 이미지에 표시되지 않습니다
                     </div>
                   </div>
                 </div>
