@@ -445,7 +445,7 @@ export function BatchImageGenerator() {
             const blob = await response.blob();
             
             // Add to zip
-            const fileName = `${authorInfo.name.replace(/\s+/g, '_')}_${authorInfo.title.replace(/\s+/g, '')}_${background.name.replace('좋아요 ', '').replace('회', '').replace(' 이상', '')}_${pageIndex + 1}.png`;
+            const fileName = `${authorInfo.name.replace(/\s+/g, '')}_${authorInfo.title.replace(/\s+/g, '')}_${background.name.replace('좋아요 ', '').replace('회', '').replace(' 이상', '')}_${pageIndex + 1}.png`;
             stageFolder.file(fileName, blob);
             
             // Clean up blob URL
