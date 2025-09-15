@@ -420,7 +420,7 @@ export function BatchImageGenerator() {
       // Create folders for each background stage
       for (const background of DEFAULT_BACKGROUNDS) {
         console.log('background: ', background);
-        const stageFolder = zip.folder(`${folderName}/${background.name.replace('회', '').replace(' 이상', '')}`);
+        const stageFolder = zip.folder(`${folderName}/${background.name.replace(' ', '').replace('회', '').replace('이상', '')}`);
         if (!stageFolder) {
           throw new Error(t('export.errors.folderCreationFailed', { background: background.name }));
         }
