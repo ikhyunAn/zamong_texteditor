@@ -1,4 +1,4 @@
-# Text Rendering Test Implementation Summary
+# Text Rendering Test Plan and Strategy
 
 ## Overview
 This document summarizes the comprehensive testing implementation for the text rendering functionality in the Zamong Text Editor project. The tests verify that all text rendering settings are correctly applied and that text remains within canvas bounds for all configurations.

@@ -1,4 +1,4 @@
-# Google Cloud Deployment Fixes for Author Font Issue
+# Google Cloud Deployment Fixes for Font Issues
 
 ## Problem Summary
 
@@ -59,9 +59,7 @@ When deploying the Zamong Text Editor to Google Cloud Run, the custom Korean aut
 **Additions**:
 ```bash
 # Explicitly include Korean font files
-!public/fonts/작가폰트_나눔손글씨*
-!public/fonts/HakgyoansimBareonbatangB.ttf
-!public/fonts/HakgyoansimBareonbatangR.ttf
+!public/fonts/author-handwriting-font.ttf
 !public/fonts/KoPubWorld*
 ```
 
@@ -119,8 +117,8 @@ After deployment, visit your app and check:
 
 3. **Direct Font Access**: Verify font files are accessible:
    ```
-   https://your-app-url/fonts/HakgyoansimBareonbatangB.ttf
-   https://your-app-url/fonts/작가폰트_나눔손글씨%20딸에게%20엄마가.ttf
+https://your-app-url/fonts/KoPubWorld%20Batang%20Light.ttf
+https://your-app-url/fonts/author-handwriting-font.ttf
    ```
 
 4. **Test Author Font**: Create a story with Korean text and generate images to verify the author font appears correctly on the last page of Stage 4 backgrounds.
@@ -163,7 +161,7 @@ This enables:
 
 ```bash
 # Check font file access
-curl -I https://your-app-url/fonts/작가폰트_나눔손글씨%20딸에게%20엄마가.ttf
+curl -I https://your-app-url/fonts/KoPubWorld%20Batang%20Light.ttf
 
 # Download debug report
 # Available via the font verification panel when debug mode is enabled

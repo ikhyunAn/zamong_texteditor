@@ -1,4 +1,4 @@
-# Zamong Text Editor
+# Zamong Text Editor — Comprehensive Guide
 
 <div align="center">
 
@@ -98,30 +98,30 @@ The application addresses the growing need for visual storytelling on social med
 ## 🔧 Tech Stack
 
 ### Core Framework
-- **[Next.js 15](https://nextjs.org/)** - React framework with App Router for optimal performance
-- **[React 18](https://react.dev/)** - Modern React with concurrent features
-- **[TypeScript 5.7](https://www.typescriptlang.org/)** - Type safety and enhanced DX
+- **[Next.js 15.0.3](https://nextjs.org/)** - React framework with App Router for optimal performance
+- **[React 18.3.1](https://react.dev/)** - Modern React with concurrent features
+- **[TypeScript 5.7.2](https://www.typescriptlang.org/)** - Type safety and enhanced DX
 
 ### UI & Styling
-- **[Tailwind CSS 3.4](https://tailwindcss.com/)** - Utility-first CSS framework
+- **[Tailwind CSS 3.4.17](https://tailwindcss.com/)** - Utility-first CSS framework
 - **[Tailwind Typography](https://tailwindcss.com/docs/plugins#typography)** - Beautiful typography defaults
 - **[Lucide React](https://lucide.dev/)** - Modern icon system
 - **[Radix UI](https://www.radix-ui.com/)** - Unstyled, accessible UI components
 
 ### Text Editing & Canvas
 - **[Tiptap](https://tiptap.dev/)** - Headless editor built on ProseMirror
-- **[Fabric.js 5.3](http://fabricjs.com/)** - Powerful canvas library for image generation
+- **[Fabric.js 5.3.0](http://fabricjs.com/)** - Powerful canvas library for image generation
 - **[React Window](https://react-window.vercel.app/)** - Efficient rendering for large lists
 
 ### State Management & Utils
-- **[Zustand 5.0](https://zustand-demo.pmnd.rs/)** - Lightweight state management
-- **[React Hook Form](https://react-hook-form.com/)** - Performant form handling
-- **[JSZip 3.10](https://stuk.github.io/jszip/)** - Client-side ZIP file generation
-- **[i18next](https://www.i18next.com/)** - Internationalization framework
+- **[Zustand 5.0.2](https://zustand-demo.pmnd.rs/)** - Lightweight state management
+- **[React Hook Form 7.54.2](https://react-hook-form.com/)** - Performant form handling
+- **[JSZip 3.10.1](https://stuk.github.io/jszip/)** - Client-side ZIP file generation
+- **[i18next 25.3.4](https://www.i18next.com/)** - Internationalization framework
 
 ### Development Tools
-- **[ESLint 9](https://eslint.org/)** - Code quality and consistency
-- **[Jest 30](https://jestjs.io/)** - Testing framework
+- **[ESLint 9.17.0](https://eslint.org/)** - Code quality and consistency
+- **[Jest 30.0.4](https://jestjs.io/)** - Testing framework
 - **[Testing Library](https://testing-library.com/)** - Component testing utilities
 
 ## 📁 Project Structure
@@ -132,59 +132,90 @@ zamong_texteditor/
 │   ├── 📁 app/                    # Next.js App Router
 │   │   ├── layout.tsx             # Root layout component
 │   │   ├── page.tsx               # Home page with step routing
-│   │   ├── globals.css            # Global styles and CSS variables
-│   │   └── providers.tsx          # Context providers setup
+│   │   ├── providers.tsx          # Context providers setup
+│   │   ├── loading.tsx            # Loading component
+│   │   ├── error.tsx              # Error boundary component
+│   │   ├── not-found.tsx          # 404 page component
+│   │   └── global-error.tsx       # Global error handler
 │   │
 │   ├── 📁 components/             # React components
 │   │   ├── 📁 ui/                 # Base UI components
 │   │   │   ├── button.tsx         # Button component with variants
 │   │   │   ├── card.tsx           # Card layout component
 │   │   │   ├── enhanced-textarea.tsx  # Custom textarea with features
-│   │   │   └── toast.tsx          # Toast notification system
+│   │   │   ├── toast.tsx          # Toast notification system
+│   │   │   ├── input.tsx          # Input field component
+│   │   │   ├── label.tsx          # Label component
+│   │   │   ├── badge.tsx          # Badge component
+│   │   │   ├── settings-manager.tsx # Settings management UI
+│   │   │   ├── LanguageToggle.tsx # Language switching component
+│   │   │   └── NotificationSection.tsx # Notification display
 │   │   │
 │   │   ├── 📁 layout/             # Layout components
 │   │   │   ├── AuthorInfoForm.tsx # Author information input form
-│   │   │   ├── ClientLayout.tsx   # Client-side layout wrapper
-│   │   │   └── ProgressStepper.tsx # Step indicator component
+│   │   │   └── ClientLayout.tsx   # Client-side layout wrapper
 │   │   │
 │   │   ├── 📁 editor/             # Text editing components
-│   │   │   ├── StoryEditor.tsx    # Simple Tiptap editor
-│   │   │   ├── PaginatedEditor.tsx # Advanced paginated editor
-│   │   │   └── PagedDocumentEditor.tsx # Alternative editor implementation
+│   │   │   └── PaginatedEditor.tsx # Advanced paginated editor
 │   │   │
-│   │   └── 📁 canvas/             # Image generation components
-│   │       ├── BatchImageGenerator.tsx # Main image generation UI
-│   │       ├── ImageGenerator.tsx # Single image generator
-│   │       └── TextStyler.tsx     # Text styling controls
+│   │   ├── 📁 canvas/             # Image generation components
+│   │   │   ├── BatchImageGenerator.tsx # Main image generation UI
+│   │   │   └── TextStyler.tsx     # Text styling controls
+│   │   │
+│   │   ├── 📁 background/         # Background management
+│   │   │   └── ImageUploader.tsx  # Background image upload component
+│   │   │
+│   │   └── 📁 Font Components      # Font loading and management
+│   │       ├── CloudFontLoader.tsx      # Cloud-based font loader
+│   │       ├── FontLoader.tsx           # Main font loading component
+│   │       ├── FontPreloader.tsx        # Font preloading utility
+│   │       └── FontVerificationPanel.tsx # Font verification debugging
 │   │
 │   ├── 📁 store/                  # State management
-│   │   └── useStoryStore.ts       # Main Zustand store
+│   │   ├── useStoryStore.ts       # Main Zustand store
+│   │   └── useLanguageStore.ts    # Language preference store
 │   │
 │   ├── 📁 hooks/                  # Custom React hooks
 │   │   ├── usePageManager.ts      # Page navigation and management
 │   │   ├── useZipDownload.ts      # ZIP file generation hook
-│   │   ├── useCanvasPreview.ts    # Canvas preview management
-│   │   └── useToast.ts            # Toast notification hook
+│   │   ├── useToast.ts            # Toast notification hook
+│   │   ├── useEditorSettings.ts   # Editor configuration hook
+│   │   └── useSyncStatus.ts       # Content synchronization hook
 │   │
 │   ├── 📁 lib/                    # Utility functions
 │   │   ├── canvas-utils.ts        # Fabric.js canvas operations
 │   │   ├── constants.ts           # Application constants
 │   │   ├── font-debug.ts          # Font loading diagnostics
-│   │   └── debounce.ts            # Utility functions
+│   │   ├── font-debug-enhanced.ts # Enhanced font debugging
+│   │   ├── font-utils.ts          # Font management utilities
+│   │   ├── cloud-font-loader.ts   # Cloud font loading logic
+│   │   ├── embedded-fonts.ts      # Embedded font configurations
+│   │   ├── canvas-font-fallback.ts # Canvas font fallback handling
+│   │   ├── server-font-utils.ts   # Server-side font utilities
+│   │   ├── export-utils.ts        # Export functionality
+│   │   ├── text-processing.ts     # Text manipulation utilities
+│   │   ├── settings-utils.ts      # Settings management
+│   │   ├── pagination-validation.ts # Page validation logic
+│   │   ├── debounce.ts            # Debounce utility functions
+│   │   └── i18n.ts                # Internationalization setup
+│   │
+│   ├── 📁 workers/                # Web Workers
+│   │   └── export.worker.ts       # Background export processing
 │   │
 │   └── 📁 types/                  # TypeScript definitions
-│       └── index.ts               # Main type definitions
+│       ├── index.ts               # Main type definitions
+│       └── fabric.d.ts            # Fabric.js type declarations
 │
 ├── 📁 public/                     # Static assets
 │   ├── 📁 fonts/                  # Custom font files
-│   │   ├── HakgyoansimBareonbatangR.ttf  # Korean regular font
-│   │   └── HakgyoansimBareonbatangB.ttf  # Korean bold font
+│   │   ├── KoPubWorld Batang Light.ttf    # Korean body/title font
+│   │   └── author-handwriting-font.ttf    # Korean handwriting font for author names
 │   │
 │   ├── 📁 backgrounds/            # Background images
-│   │   ├── stage_1.png           # Background template 1
-│   │   ├── stage_2.png           # Background template 2
-│   │   ├── stage_3.png           # Background template 3
-│   │   └── stage_4.png           # Background template 4
+│   │   ├── stage_1.png           # Background template 1 (좋아요 0회)
+│   │   ├── stage_2.png           # Background template 2 (좋아요 1회)
+│   │   ├── stage_3.png           # Background template 3 (좋아요 2회)
+│   │   └── stage_4.png           # Background template 4 (좋아요 3회 이상)
 │   │
 │   └── 📁 locales/               # Internationalization
 │       ├── 📁 en/               # English translations
@@ -192,14 +223,24 @@ zamong_texteditor/
 │
 ├── 📁 docs/                      # Technical documentation
 │   ├── FONT_LOADING_IMPLEMENTATION.md
-│   ├── TEXT_EDITOR_FIXES_SUMMARY.md
-│   └── CONTENT_INTEGRITY_SNAPSHOT_REPORT.md
+│   ├── lineHeight-implementation.md
+│   ├── settings-management.md
+│   ├── TEXT_RENDERING_TEST_SUMMARY.md
+│   ├── FIRST_PAGE_NEWLINE_TEST_SUMMARY.md
+│   ├── NEWLINE_SYNCHRONIZATION_FIX.md
+│   ├── CLOUD_DEPLOYMENT_GUIDE.md
+│   ├── GOOGLE_CLOUD_DEPLOYMENT_FIXES.md
+│   ├── AUTO_SYNC_TEST_PLAN.md
+│   └── dynamic-overflow-detection-plan.md
 │
 └── 📄 Configuration Files
     ├── next.config.js            # Next.js configuration
+    ├── next-i18next.config.js    # i18next configuration
     ├── tailwind.config.js        # Tailwind CSS configuration
     ├── tsconfig.json            # TypeScript configuration
     ├── jest.config.js           # Jest testing configuration
+    ├── jest.setup.js            # Jest setup file
+    ├── postcss.config.js        # PostCSS configuration
     └── package.json             # Project dependencies and scripts
 ```
 
@@ -389,7 +430,7 @@ The editor integrates with the Korean font system:
 ```typescript
 // Ensures Korean font consistency
 useEffect(() => {
-  const bodyFont = 'HakgyoansimBareonbatangR'; // Korean regular weight
+  const bodyFont = 'KoPubWorldBatangLight'; // Korean light weight
   if (editorSettings.fontFamily !== bodyFont) {
     setFontFamily(bodyFont);
   }
@@ -589,22 +630,22 @@ The application uses a carefully crafted color system built on CSS custom proper
 ```scss
 // Font loading with CSS @font-face
 @font-face {
-  font-family: 'HakgyoansimBareonbatangR';
-  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'KoPubWorldBatangLight';
+  src: url('/fonts/KoPubWorld Batang Light.ttf') format('truetype');
+  font-weight: 300;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'HakgyoansimBareonbatangB';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
-  font-weight: 700;
+  font-family: 'CustomFont';
+  src: url('/fonts/author-handwriting-font.ttf') format('truetype');
+  font-weight: 400;
   font-display: swap;
 }
 
 // Tailwind utility classes
-.font-korean-regular { font-family: 'HakgyoansimBareonbatangR', sans-serif; }
-.font-korean-bold { font-family: 'HakgyoansimBareonbatangB', sans-serif; }
+.font-korean-light { font-family: 'KoPubWorldBatangLight', sans-serif; }
+.font-korean-handwriting { font-family: 'CustomFont', cursive; }
 ```
 
 ### Component Variants
@@ -909,34 +950,33 @@ const useStoryStore = create<StoryStore>()(
 );
 ```
 
-## 🔤 Font System
+### 🔤 Font System
 
 ### Korean Typography Excellence
 
-The application implements a sophisticated font system optimized for Korean content creation with professional typography rendering.
+The application implements a sophisticated font system optimized for Korean content creation with professional typography rendering, using carefully selected fonts for different purposes.
 
 ### Font Architecture
 
 **Primary Fonts**
-- **HakgyoansimBareonbatangR** (Regular) - Body text and general content
-- **HakgyoansimBareonbatangB** (Bold) - Titles and headings
-- **CustomFont** (나눔손글씨) - Author signatures and decorative text
+- **KoPubWorldBatangLight** - Primary font for body text and titles with excellent Korean character support
+- **CustomFont** (나눔손글씨) - Handwriting-style font for author signatures and decorative elements
 
 ### Font Loading Strategy
 
 **1. CSS @font-face Declarations**
 ```css
 @font-face {
-  font-family: 'HakgyoansimBareonbatangR';
-  src: url('/fonts/HakgyoansimBareonbatangR.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'KoPubWorldBatangLight';
+  src: url('/fonts/KoPubWorld Batang Light.ttf') format('truetype');
+  font-weight: 300;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'HakgyoansimBareonbatangB';
-  src: url('/fonts/HakgyoansimBareonbatangB.ttf') format('truetype');
-  font-weight: 700;
+  font-family: 'CustomFont';
+  src: url('/fonts/author-handwriting-font.ttf') format('truetype');
+  font-weight: 400;
   font-display: swap;
 }
 ```
@@ -967,9 +1007,8 @@ const loadFontForCanvas = async (fontPath: string, fontFamily: string): Promise<
 ```typescript
 const ensureFontsLoaded = async (): Promise<void> => {
   const fontPromises = [
-    loadFontForCanvas('/fonts/HakgyoansimBareonbatangR.ttf', 'HakgyoansimBareonbatangR'),
-    loadFontForCanvas('/fonts/HakgyoansimBareonbatangB.ttf', 'HakgyoansimBareonbatangB'),
-    loadFontForCanvas('/fonts/나눔손글씨.ttf', 'CustomFont')
+    loadFontForCanvas('/fonts/KoPubWorld Batang Light.ttf', 'KoPubWorldBatangLight'),
+    loadFontForCanvas('/fonts/author-handwriting-font.ttf', 'CustomFont')
   ];
   
   await Promise.allSettled(fontPromises);
@@ -982,22 +1021,22 @@ const ensureFontsLoaded = async (): Promise<void> => {
 ```typescript
 // Body text font (user content)
 export function getBodyFont(): string {
-  return 'HakgyoansimBareonbatangR'; // Korean regular
+  return 'KoPubWorldBatangLight'; // Korean light weight for readability
 }
 
 // Title font (story titles)
 export function getTitleFont(): string {
-  return 'HakgyoansimBareonbatangB'; // Korean bold
+  return 'KoPubWorldBatangLight'; // Same font for consistency
 }
 
 // Author signature font
 export function getAuthorFont(): string {
-  return 'CustomFont'; // Handwriting style
+  return 'CustomFont'; // Handwriting style for author names
 }
 
 // Recommended font regardless of UI language
 export function getRecommendedFontForLanguage(): string {
-  return 'HakgyoansimBareonbatangR'; // Consistent Korean support
+  return 'KoPubWorldBatangLight'; // Consistent Korean typography
 }
 ```
 
@@ -1091,7 +1130,7 @@ const addTextToCanvas = (canvas: any, config: CanvasTextConfig) => {
     fill: textStyle.color,
     textAlign: globalAlignment || textStyle.alignment,
     lineHeight: editorSettings.lineHeight,
-    splitByGrapheme: true, // Essential for Korean text wrapping
+    splitByGrapheme: true, // Essential for Korean text
     selectable: false,
     evented: false
   });
@@ -1106,7 +1145,7 @@ const addTextToCanvas = (canvas: any, config: CanvasTextConfig) => {
 ```typescript
 // Ensure Korean font consistency on mount
 useEffect(() => {
-  const bodyFont = 'HakgyoansimBareonbatangR';
+  const bodyFont = 'KoPubWorldBatangLight';
   if (editorSettings.fontFamily !== bodyFont) {
     console.log(`[Font Init] Setting Korean body font: ${bodyFont}`);
     setFontFamily(bodyFont);
@@ -1119,7 +1158,7 @@ useEffect(() => {
 ```typescript
 // Font remains consistent regardless of UI language
 useEffect(() => {
-  const koreanFont = 'HakgyoansimBareonbatangR';
+  const koreanFont = 'KoPubWorldBatangLight';
   
   // Only update if there's actually a mismatch
   if (editorSettings.fontFamily !== koreanFont || selectedFont !== koreanFont) {
@@ -1148,7 +1187,7 @@ const getFallbackFont = (preferredFont: string): string => {
   
   // Fallback hierarchy
   const fallbacks = [
-    'HakgyoansimBareonbatangR',
+    'KoPubWorldBatangLight',
     'Arial Unicode MS',
     'Malgun Gothic',
     'sans-serif'
@@ -1578,8 +1617,7 @@ module.exports = {
     extend: {
       // Custom font families
       fontFamily: {
-        'korean-regular': ['HakgyoansimBareonbatangR', 'sans-serif'],
-        'korean-bold': ['HakgyoansimBareonbatangB', 'sans-serif'],
+        'korean-light': ['KoPubWorldBatangLight', 'sans-serif'],
         'korean-handwriting': ['CustomFont', 'cursive'],
       },
       
@@ -1725,18 +1763,20 @@ export const PAGE_CONSTRAINTS = {
 // Font configurations
 export const AVAILABLE_FONTS = [
   {
-    name: '나눔손글씨',
-    family: 'CustomFont',
-    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    name: 'KoPub 바탕 라이트',
+    family: 'KoPubWorldBatangLight',
+    path: '/fonts/KoPubWorld Batang Light.ttf',
     type: 'custom',
-    languages: ['ko']
+    languages: ['ko', 'en'],
+    purpose: ['title', 'body']
   },
   {
-    name: '학교안심',
-    family: 'HakgyoansimBareonbatangR',
-    path: '/fonts/HakgyoansimBareonbatangR.ttf',
+    name: '나눔손글씨',
+    family: 'CustomFont',
+    path: '/fonts/author-handwriting-font.ttf',
     type: 'custom',
-    languages: ['ko', 'en']
+    languages: ['ko'],
+    purpose: ['author']
   }
 ] as const;
 
@@ -1744,17 +1784,28 @@ export const AVAILABLE_FONTS = [
 export const DEFAULT_BACKGROUNDS = [
   {
     id: 'stage_1',
-    name: 'Stage 1',
+    name: '좋아요 0회',
     path: '/backgrounds/stage_1.png',
-    description: 'Classic background'
+    description: 'First stage background'
   },
   {
     id: 'stage_2',
-    name: 'Stage 2',
+    name: '좋아요 1회',
     path: '/backgrounds/stage_2.png',
-    description: 'Modern background'
+    description: 'Second stage background'
   },
-  // ... more backgrounds
+  {
+    id: 'stage_3',
+    name: '좋아요 2회',
+    path: '/backgrounds/stage_3.png',
+    description: 'Third stage background'
+  },
+  {
+    id: 'stage_4',
+    name: '좋아요 3회 이상',
+    path: '/backgrounds/stage_4.png',
+    description: 'Fourth stage background'
+  }
 ] as const;
 ```
 
@@ -1797,7 +1848,14 @@ const BatchImageGenerator = dynamic(
 // Font preloading in document head
 <link
   rel="preload"
-  href="/fonts/HakgyoansimBareonbatangR.ttf"
+  href="/fonts/KoPubWorld Batang Light.ttf"
+  as="font"
+  type="font/truetype"
+  crossOrigin=""
+/>
+<link
+  rel="preload"
+  href="/fonts/author-handwriting-font.ttf"
   as="font"
   type="font/truetype"
   crossOrigin=""
@@ -1900,7 +1958,7 @@ export function reportWebVitals(metric: NextWebVitalsMetric) {
   // Send metrics to analytics
   gtag('event', metric.name, {
     event_category: 'Web Vitals',
-    value: Math.round(metric.value),
+    value: Math.round(metric value),
     event_label: metric.id,
     non_interaction: true,
   });
@@ -1955,7 +2013,6 @@ NEXT_PUBLIC_CANVAS_DEBUG=false
 
 #### Font Loading Problems
 
-**Issue: Fonts not displaying correctly in canvas**
 ```
 Symptom: Canvas-generated images show fallback fonts instead of Korean fonts
 Cause: Fonts not properly loaded before canvas operations
@@ -1997,7 +2054,6 @@ if (process.env.NODE_ENV === 'development') {
 
 #### Canvas Memory Issues
 
-**Issue: Browser crashes during batch image generation**
 ```
 Symptom: Browser becomes unresponsive or crashes when generating many images
 Cause: Canvas objects not properly disposed, memory accumulation
@@ -2039,7 +2095,6 @@ const generateImages = async (sections: StorySection[]) => {
 
 #### Editor Content Synchronization
 
-**Issue: Content not syncing between pages**
 ```
 Symptom: Text written on one page disappears or appears on wrong page
 Cause: Race conditions in content updates, improper state synchronization
@@ -2084,7 +2139,6 @@ const navigateWithSync = async (pageIndex: number) => {
 
 #### Performance Issues
 
-**Issue: Slow typing or laggy editor**
 ```
 Symptom: Noticeable delay when typing, editor feels unresponsive
 Cause: Excessive re-renders, heavy computations on main thread
@@ -2119,7 +2173,6 @@ const Editor = React.memo(() => {
 
 #### Browser Compatibility
 
-**Issue: Application not working in Safari/older browsers**
 ```
 Symptom: Features missing or errors in specific browsers
 Cause: Modern API usage without polyfills
@@ -2482,13 +2535,13 @@ loadFontForCanvas: (fontPath: string, fontFamily: string) => Promise<boolean>;
 getFallbackFont: (preferredFont: string) => string;
 
 // Font helper functions
-getBodyFont: () => string;          // Returns 'HakgyoansimBareonbatangR'
-getTitleFont: () => string;         // Returns 'HakgyoansimBareonbatangB'  
+getBodyFont: () => string;          // Returns 'KoPubWorldBatangLight'
+getTitleFont: () => string;         // Returns 'KoPubWorldBatangLight'  
 getAuthorFont: () => string;        // Returns 'CustomFont'
 
 // Usage
 await ensureFontsLoaded();
-const isLoaded = await loadFontForCanvas('/fonts/HakgyoansimBareonbatangR.ttf', 'HakgyoansimBareonbatangR');
+const isLoaded = await loadFontForCanvas('/fonts/KoPubWorld Batang Light.ttf', 'KoPubWorldBatangLight');
 const fallback = getFallbackFont('NonexistentFont'); // Returns available fallback
 ```
 
@@ -2527,18 +2580,20 @@ const PAGE_CONSTRAINTS = {
 ```typescript
 const AVAILABLE_FONTS = [
   {
-    name: '나눔손글씨',
-    family: 'CustomFont',
-    path: '/fonts/작가폰트_나눔손글씨 딸에게 엄마가.ttf',
+    name: 'KoPub 바탕 라이트',
+    family: 'KoPubWorldBatangLight',
+    path: '/fonts/KoPubWorld Batang Light.ttf',
     type: 'custom',
-    languages: ['ko']
+    languages: ['ko', 'en'],
+    purpose: ['title', 'body']
   },
   {
-    name: '학교안심',
-    family: 'HakgyoansimBareonbatangR',
-    path: '/fonts/HakgyoansimBareonbatangR.ttf',
+    name: '나눔손글씨',
+    family: 'CustomFont',
+    path: '/fonts/author-handwriting-font.ttf',
     type: 'custom',
-    languages: ['ko', 'en']
+    languages: ['ko'],
+    purpose: ['author']
   }
 ];
 ```
@@ -2548,11 +2603,28 @@ const AVAILABLE_FONTS = [
 const DEFAULT_BACKGROUNDS = [
   {
     id: 'stage_1',
-    name: 'Stage 1',
+    name: '좋아요 0회',
     path: '/backgrounds/stage_1.png',
     description: 'First stage background'
   },
-  // ... additional backgrounds
+  {
+    id: 'stage_2',
+    name: '좋아요 1회',
+    path: '/backgrounds/stage_2.png',
+    description: 'Second stage background'
+  },
+  {
+    id: 'stage_3',
+    name: '좋아요 2회',
+    path: '/backgrounds/stage_3.png',
+    description: 'Third stage background'
+  },
+  {
+    id: 'stage_4',
+    name: '좋아요 3회 이상',
+    path: '/backgrounds/stage_4.png',
+    description: 'Fourth stage background'
+  }
 ];
 ```
 

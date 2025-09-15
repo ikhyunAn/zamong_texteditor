@@ -27,9 +27,9 @@ The settings management system provides:
 
 ```typescript
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
-  fontFamily: 'CustomFontTTF',
-  fontSize: 18,
-  lineHeight: 1.5,
+  fontFamily: 'KoPubWorldBatangLight',
+  fontSize: 32,
+  lineHeight: 1.8,
   textAlignment: 'left',
   globalTextAlignment: 'left',
   verticalAlignment: 'top'
