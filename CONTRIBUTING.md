@@ -1,4 +1,4 @@
-# Contributing to [Project Name]
+# Contributing to [ZamongTextEditor]
 
 Thank you for your interest in contributing to our project! We appreciate your time and effort in helping make this project better for everyone. Whether you're fixing bugs, adding features, improving documentation, or providing feedback, every contribution is valuable and welcome.
 
