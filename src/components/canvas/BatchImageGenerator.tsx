@@ -45,6 +45,9 @@ function wrapTextUsingDOM(
 ): string {
   if (typeof document === 'undefined') return text;
 
+  // Use sentinel for soft wraps (DOM visual wraps) to distinguish from original newlines
+  const SOFT = '\u2028';
+
   // Simple cache to reduce repeated DOM layout work
   const cacheKey = `${options.fontFamily}|${options.fontSize}|${options.lineHeight}|${options.textAlign}|${Math.floor(options.width)}|${text}`;
   (wrapTextUsingDOM as any)._cache = (wrapTextUsingDOM as any)._cache || new Map<string, string>();
@@ -109,20 +112,75 @@ function wrapTextUsingDOM(
     return lines;
   };
 
-  // Split by explicit newlines to preserve author-entered breaks
-  const segments = text.split('\n');
-  const resultLines: string[] = [];
-  segments.forEach((seg) => {
-    const segLines = computeLines(seg);
-    for (let i = 0; i < segLines.length; i++) {
-      resultLines.push(segLines[i]);
+  // Tokenize by newline runs to preserve author-entered breaks exactly
+  const tokens = text.split(/(\n+)/);
+
+  // First pass: rewrap only content tokens via DOM; keep newline tokens as-is
+  const assembled: string[] = [];
+  for (let idx = 0; idx < tokens.length; idx++) {
+    const tk = tokens[idx];
+    if (/^\n+$/.test(tk)) {
+      assembled.push(tk);
+    } else {
+      const segLines = computeLines(tk);
+
+      // Approach A: Unconditionally drop trailing whitespace-only or empty visual lines
+      // Use Unicode-aware regex to detect all types of whitespace including:
+      // \s (standard whitespace), \u00A0 (non-breaking space), \u2007 (figure space),
+      // \u202F (narrow no-break space), \u200B (zero-width space), \u2060 (word joiner),
+      // \u3000 (ideographic space)
+      // Also drop completely empty lines (length === 0)
+      if (segLines.length > 1) {
+        const last = segLines[segLines.length - 1];
+        const isEmpty = last.length === 0;
+        const isWhitespaceOnly = last.length > 0 && /^[\s\u00A0\u2007\u202F\u200B\u2060\u3000]+$/u.test(last);
+        if (isEmpty || isWhitespaceOnly) {
+          segLines.pop();
+        }
+      }
+
+      // Join visual lines with sentinel to avoid interfering with original newline normalization
+      assembled.push(segLines.join(SOFT));
     }
-  });
+  
+  // const segments = text.split('\n');
+  // const resultLines: string[] = [];
+  // segments.forEach((seg) => {
+  //   const segLines = computeLines(seg);
+  //   for (let i = 0; i < segLines.length; i++) {
+  //     resultLines.push(segLines[i]);
+  }
+  
+
+  // Second pass: normalize newline runs
+  // - 1 newline (soft break) => keep 1
+  // - 2 newlines (paragraph) => reduce to 1 (to avoid extra blank line in canvas)
+  // - 3+ newlines => reduce by 1 (preserve author-intended blank lines)
+  const normalized: string[] = [];
+  for (const piece of assembled) {
+    if (/^\n+$/.test(piece)) {
+      const n = piece.length;
+      const adjusted = '\n'.repeat(Math.max(1, n - 1));
+      normalized.push(adjusted);
+    } else {
+      normalized.push(piece);
+    }
+  }
+
 
   // Remove container
   if (container.parentNode) container.parentNode.removeChild(container);
 
-  const rewrapped = resultLines.join('\n');
+  // Join all normalized pieces
+  let joined = normalized.join('');
+  
+  // Approach E: Collapse sequences of sentinel followed by newlines into a single newline
+  // This prevents double line breaks when soft wraps are adjacent to hard breaks
+  // Pattern: one or more sentinels followed by one or more newlines => single newline
+  joined = joined.replace(new RegExp(`${SOFT}+\\n+`, 'g'), '\n');
+  
+  // Convert remaining sentinel soft wraps to real newlines
+  const rewrapped = joined.split(SOFT).join('\n');
   cache.set(cacheKey, rewrapped);
   return rewrapped;
 }
@@ -286,10 +344,11 @@ export function BatchImageGenerator() {
           textAlign: textStyle.alignment
         });
 
-        const text = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(rewrapped, {
+        // Use fabric.Text instead of Textbox to prevent double-wrapping
+        // Since we've already wrapped the text using wrapTextUsingDOM, we don't want Fabric to wrap it again
+        const text = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(rewrapped, {
           left: contentLeft,
           top: topOffset,
-          width: contentWidth,
           fontSize: editorSettings.fontSize || textStyle.fontSize, // Prioritize editorSettings like export worker
           fontFamily: ((window as unknown as { _canvasFonts?: { body?: string } })._canvasFonts?.body) || getBestCanvasFont('body'),
           fill: textStyle.color,
@@ -297,8 +356,7 @@ export function BatchImageGenerator() {
           lineHeight: lineHeight,
           splitByGrapheme: true,
           selectable: false,
-          evented: false,
-          padding: 0
+          evented: false
         });
 
         // Add text to canvas first so Fabric.js can calculate dimensions
