@@ -8,6 +8,7 @@ import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
 import { usePageManager } from '../../hooks/usePageManager';
 import { useSyncStatus } from '../../hooks/useSyncStatus';
+import { useAutoPagination } from '../../hooks/useAutoPagination';
 import { LINE_HEIGHT_OPTIONS, getTitleFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -38,12 +39,14 @@ interface PaginatedEditorProps {
   className?: string;
 }
 
-// Page styling constants
-const PAGE_WIDTH = 900;
-const PAGE_HEIGHT = 1600;
-const PAGE_PADDING = 60;
+// Page styling constants - Base dimensions for aspect ratio
+const PAGE_ASPECT_RATIO = 9 / 16; // width / height
+const BASE_PAGE_WIDTH = 900;
+const BASE_PAGE_HEIGHT = 1600;
+const BASE_PAGE_PADDING = 60;
 
 import { Editor } from '@tiptap/core';
+import { ResponsiveEditorWrapper } from './ResponsiveEditorWrapper';
 
 const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor: Editor) => void }> = ({ className, onEditorReady }) => {
   const { t } = useTranslation('common');
@@ -72,6 +75,45 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
   // Using only KoPubWorldBatangLight font - no font selection needed
   const [pageBreakMessage, setPageBreakMessage] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [pageScale, setPageScale] = useState(1);
+
+  // Calculate responsive scale to fit entire page in viewport
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Account for header/controls (roughly 300-350px)
+        const availableHeight = viewportHeight - 400;
+        const availableWidth = containerWidth - 60; // Padding
+        
+        // Calculate scale to fit both dimensions
+        const scaleByHeight = availableHeight / BASE_PAGE_HEIGHT;
+        const scaleByWidth = availableWidth / BASE_PAGE_WIDTH;
+        
+        // Use the smaller scale to ensure full page fits
+        const scale = Math.max(0.1, Math.min(scaleByWidth, scaleByHeight, 1));
+        
+        console.log('[Scaling]', {
+          viewportHeight,
+          containerWidth,
+          availableHeight,
+          availableWidth,
+          scaleByHeight: scaleByHeight.toFixed(3),
+          scaleByWidth: scaleByWidth.toFixed(3),
+          finalScale: scale.toFixed(3)
+        });
+        
+        setPageScale(scale);
+      }
+    };
+
+    setTimeout(updateDimensions, 100);
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
   // Enhanced sync status management
   const { 
@@ -129,10 +171,20 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding-left: ${PAGE_PADDING}px; padding-right: ${PAGE_PADDING}px; padding-bottom: ${PAGE_PADDING}px; padding-top: ${currentPageIndex === 0 && authorInfo.title ? '0' : PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
+        style: `padding-left: ${BASE_PAGE_PADDING}px; padding-right: ${BASE_PAGE_PADDING}px; padding-bottom: ${BASE_PAGE_PADDING}px; padding-top: ${currentPageIndex === 0 && authorInfo.title ? '0' : BASE_PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
         contenteditable: 'true',
       },
     },
+  });
+  
+  // Automatic pagination system - must be after editor is created
+  const { 
+    isProcessing: isAutoPaginating,
+    checkPagination
+  } = useAutoPagination({
+    editor,
+    enabled: true,
+    debounceMs: 500 // Slightly longer debounce for better UX
   });
 
   // Update text alignment dynamically when needed
@@ -368,27 +420,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     }
   }, [editor, currentPageIndex, pages, navigateToPage, syncNow, storeSnapshot]);
 
-  // Add new page wrapper that syncs current editor content before adding new page
-  const addNewPageWithSync = useCallback(() => {
-    if (editor) {
-      // Get current editor content and sync it to the store before adding new page
-      const currentEditorHtml = editor.getHTML();
-      const currentEditorContent = htmlToTextWithLineBreaks(currentEditorHtml);
-      console.log('[AddNewPage] Syncing editor content before adding new page:', currentEditorContent.length, 'characters, newlines:', currentEditorContent.split('\n').length - 1);
-      
-      // Store snapshot before adding new page
-      storeSnapshot(currentPageIndex, currentEditorContent);
-      
-      // Sync immediately with high priority
-      syncNow(currentEditorContent, 'add-new-page').then(() => {
-        // Then proceed with adding new page after sync completes
-        addNewPage();
-      });
-    } else {
-      // If no editor, just add new page
-      addNewPage();
-    }
-  }, [editor, syncNow, addNewPage, storeSnapshot, currentPageIndex]);
 
   // Display sync status notification (replaces manual sync)  
   useEffect(() => {
@@ -416,145 +447,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     }
   }, [editor]);
 
-  /**
-   * ADVANCED PAGE BREAK INSERTION WITH LINE BREAK PRESERVATION
-   * 
-   * This function implements intelligent page break insertion that preserves
-   * all existing line breaks and paragraph formatting. The process involves:
-   * 
-   * 1. VALIDATION: Checks editor state, page limits, and content availability
-   * 2. CONTENT EXTRACTION: Retrieves HTML content and converts to plain text
-   *    while preserving line break structure using htmlToTextWithLineBreaks()
-   * 3. CURSOR POSITION MAPPING: Calculates precise text position accounting
-   *    for HTML tags and formatting
-   * 4. INTELLIGENT SPLITTING: Uses splitContentPreservingLineBreaks() to
-   *    split content at cursor while maintaining paragraph integrity
-   * 5. CONTENT VALIDATION: Validates that no content is lost during splitting
-   * 6. PAGE UPDATES: Updates current page and creates new page with proper
-   *    HTML formatting restored via textToHtmlWithLineBreaks()
-   * 7. NAVIGATION: Smoothly navigates to the new page with focus management
-   * 
-   * Features:
-   * - Preserves single line breaks within paragraphs
-   * - Maintains paragraph breaks (double newlines)
-   * - Handles consecutive line breaks intelligently
-   * - Validates content integrity
-   * - Provides user feedback for all operations
-   * - Includes error handling for edge cases
-   */
-  const insertPageBreak = useCallback(() => {
-    // Clear any existing message
-    setPageBreakMessage('');
-    
-    if (!editor) {
-      setPageBreakMessage(t('editor.pageBreakMessages.editorNotReady'));
-      return;
-    }
-    
-    if (pageInfo.currentPage >= 4) {
-      setPageBreakMessage(t('editor.pageBreakMessages.maxPagesReached'));
-      return;
-    }
-    
-    // Get HTML content to preserve formatting and line breaks
-    const currentHtmlContent = editor.getHTML();
-    const currentTextContent = editor.getText();
-    
-    // Check if there's any content to split
-    if (!currentTextContent.trim()) {
-      setPageBreakMessage(t('editor.pageBreakMessages.emptyPage'));
-      setTimeout(() => setPageBreakMessage(''), 3000);
-      return;
-    }
-    
-    // Get current selection range
-    const { from } = editor.state.selection;
-    
-    // Convert HTML to plain text while preserving line breaks
-    const plainTextContent = htmlToTextWithLineBreaks(currentHtmlContent);
-    
-    // Calculate the actual text position accounting for line breaks
-    let textPosition = 0;
-    const editorText = editor.getText();
-    for (let i = 0; i < editorText.length && i < from; i++) {
-      textPosition++;
-    }
-    
-    // Use enhanced splitting function that preserves line breaks
-    const { before: beforeContent, after: afterContent } = splitContentPreservingLineBreaks(plainTextContent, textPosition);
-    
-    // Validate that the split operation preserves content integrity
-    const isValid = validatePageBreakIntegrity(plainTextContent, beforeContent, afterContent);
-    if (!isValid) {
-      setPageBreakMessage(t('editor.pageBreakMessages.integrityFailed'));
-      setTimeout(() => setPageBreakMessage(''), 3000);
-      return;
-    }
-    
-    // Show success message
-    setPageBreakMessage(t('editor.pageBreakMessages.success'));
-    setTimeout(() => setPageBreakMessage(''), 2000);
-    
-    // Update current page with content before cursor
-    if (beforeContent) {
-      const beforeHtml = textToHtmlWithLineBreaks(beforeContent);
-      updateCurrentPageContent(beforeContent); // Don't trim to preserve whitespace
-      // Set editor content with preserved formatting
-      editor.commands.setContent(beforeHtml);
-      
-      // Automatically sync content immediately
-      syncNow(beforeContent, 'page-break-before');
-    } else {
-      // If no content before cursor, keep current page empty
-      updateCurrentPageContent('');
-      editor.commands.setContent('<p></p>');
-      
-      // Sync empty content
-      syncNow('', 'page-break-empty');
-    }
-    
-    // Create new page with content after cursor and navigate to it
-    setTimeout(() => {
-      // Add new page and let addNewPage handle the navigation
-      addNewPage();
-      
-      // Set content on the new page after a brief delay to ensure page is created
-      setTimeout(() => {
-        if (afterContent) {
-          const afterHtml = textToHtmlWithLineBreaks(afterContent);
-          updateCurrentPageContent(afterContent); // Don't trim to preserve whitespace
-          if (editor && !editor.isDestroyed) {
-            editor.commands.setContent(afterHtml);
-            // Focus the editor on the new page
-            editor.commands.focus('start');
-          }
-          
-          // Automatically sync the new page content
-          syncNow(afterContent, 'page-break-after');
-        } else {
-          // Ensure new page starts with proper structure and focus
-          if (editor && !editor.isDestroyed) {
-            editor.commands.setContent('<p></p>');
-            editor.commands.focus('start');
-          }
-          
-          // Sync empty content for new page
-          syncNow('', 'page-break-new-empty');
-        }
-        // Scroll to editor after navigation
-        scrollToEditor();
-      }, 200); // Increased delay to ensure navigation completes
-    }, 50);
-  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, scrollToEditor, syncNow, t]);
 
   /**
-   * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION AND EDITING
+   * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION
    * 
-   * This effect sets up global keyboard shortcuts for enhanced editing experience:
+   * This effect sets up global keyboard shortcuts for page navigation:
    * - Ctrl/Cmd + Left Arrow: Navigate to previous page (with smooth scrolling)
    * - Ctrl/Cmd + Right Arrow: Navigate to next page (with smooth scrolling)
-   * - Ctrl/Cmd + Enter: Insert page break at current cursor position
-   * - Ctrl/Cmd + Shift + N: Add new empty page (up to 4 page limit)
    * 
    * All shortcuts are disabled when typing in the editor to prevent conflicts.
    * Focus management ensures the editor remains focused after navigation.
@@ -590,24 +489,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
             }, 200);
           }
         }
-        // Ctrl/Cmd + Enter: Insert page break
-        else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.preventDefault();
-          insertPageBreak();
-        }
-        // Ctrl/Cmd + Shift + N: Add new page
-        else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
-          event.preventDefault();
-          if (pages.length < 4) {
-            addNewPageWithSync();
-          }
-        }
       }
     };
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, insertPageBreak, addNewPageWithSync, pages.length]);
+  }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor]);
 
   useEffect(() => {
     if (!editor || pages.length === 0) {
@@ -683,21 +570,19 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     if (editor) {
       const editorElement = editor.view.dom as HTMLElement;
       const shouldHaveTopPadding = !(currentPageIndex === 0 && authorInfo.title);
-      editorElement.style.paddingTop = shouldHaveTopPadding ? `${PAGE_PADDING}px` : '0px';
+      editorElement.style.paddingTop = shouldHaveTopPadding ? `${BASE_PAGE_PADDING}px` : '0px';
     }
   }, [editor, currentPageIndex, authorInfo.title]);
 
-  // Calculate available height for text content to match image generation constraints
+  // Calculate available height for text content using base dimensions (scaled visually)
   const calculateAvailableTextHeight = useCallback(() => {
-    const totalPageHeight = PAGE_HEIGHT; // 1600px
+    const totalPageHeight = BASE_PAGE_HEIGHT;
     const topPadding = 80; // pt-[80px] for title
-    const bottomPadding = PAGE_PADDING; // 60px bottom padding
+    const bottomPadding = BASE_PAGE_PADDING; // 60px bottom padding
     const titleSpacing = 20; // pb-5 class (20px)
     
     if (currentPageIndex === 0 && authorInfo.title) {
       // First page with title
-      // Calculate title height: 60px font size * 1.5 line height = 90px (approximate for single line)
-      // For multi-line titles, this would be larger, but we'll use a safe estimate
       const titleFontSize = 60;
       const titleLineHeight = 1.5;
       const estimatedTitleHeight = titleFontSize * titleLineHeight; // ~90px for single line
@@ -706,7 +591,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       return `${Math.max(availableHeight, 100)}px`; // Ensure minimum 100px
     } else {
       // Regular page without title
-      const availableHeight = totalPageHeight - PAGE_PADDING - bottomPadding;
+      const availableHeight = totalPageHeight - BASE_PAGE_PADDING - bottomPadding; // 2 * PADDING
       return `${availableHeight}px`;
     }
   }, [currentPageIndex, authorInfo.title]);
@@ -880,8 +765,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
             ))}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Sync Status Indicator (replaces sync button) */}
+        {/* Sync Status Indicator */}
+        <div className="flex items-center gap-2">
           {isSyncing && (
             <div className="flex items-center gap-2 text-sm text-blue-600">
               <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
@@ -894,28 +779,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
               <span>Auto-sync enabled</span>
             </div>
           )}
-          
-          {/* Page Break Button */}
-          <Button 
-            onClick={insertPageBreak}
-            disabled={pageInfo.currentPage >= 4}
-            size="sm"
-            variant="outline"
-            title={t('editor.insertPageBreakTitle')}
-          >
-            {t('editor.insertPageBreak')}
-          </Button>
-          
-          {/* Add New Page Button */}
-          <Button 
-            onClick={addNewPageWithSync}
-            disabled={pages.length >= 4}
-            size="sm"
-            variant="default"
-            title={t('editor.addNewPageTitle')}
-          >
-            {t('editor.addNewPage')}
-          </Button>
         </div>
       </CardHeader>
       
@@ -966,117 +829,156 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
           </div>
         </div>
 
-        {/* Pages Container */}
-        <div 
-          ref={editorRef}
-          className="overflow-y-auto overflow-x-hidden"
-          style={{ maxHeight: '80vh' }}
-        >
-          <div className="space-y-8 pb-8">
-            <div
-              className="mx-auto"
-              style={{ width: `${PAGE_WIDTH}px` }}
-            >
-              {/* Page Number */}
-              <div className="text-center text-sm text-gray-500 mb-2">
-                {t('editor.page')} {pageInfo.currentPage}
-              </div>
+        {/* Pages Container - Display all pages */}
+        <div ref={containerRef} className="w-full">
+          <div 
+            ref={editorRef}
+            className="overflow-y-auto overflow-x-hidden"
+            style={{ maxHeight: `${Math.max(400, window.innerHeight - 400)}px` }}
+          >
+            <div className="space-y-6 pb-8 flex flex-col items-center">
+              {/* Render all pages */}
+              {pages.map((page, pageIndex) => (
+                <div
+                  key={page.id}
+                  className="mx-auto"
+                  style={{ width: `${BASE_PAGE_WIDTH * pageScale}px`, height: `${BASE_PAGE_HEIGHT * pageScale}px` }}
+                >
+                {/* Page Number */}
+                <div className="text-center text-sm text-gray-500 mb-2">
+                  {t('editor.page')} {pageIndex + 1}
+                </div>
 
-              {/* Page Container */}
-              <div 
-                className="relative bg-white border-2 border-gray-300 shadow-lg rounded-lg overflow-hidden"
-                style={{
-                  width: `${PAGE_WIDTH}px`,
-                  height: `${PAGE_HEIGHT}px`,
-                  backgroundImage: 'url(/backgrounds/stage_3.png)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat'
-                }}
-              >
-                {/* Background overlay for text readability */}
+                {/* Page Container */}
                 <div 
-                  className="absolute inset-0" 
+                  className={`relative bg-white border-2 shadow-lg rounded-lg overflow-hidden ${
+                    currentPageIndex === pageIndex ? 'border-blue-500' : 'border-gray-300'
+                  }`}
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+                    width: `${BASE_PAGE_WIDTH}px`,
+                    height: `${BASE_PAGE_HEIGHT}px`,
+                    transform: `scale(${pageScale})`,
+                    transformOrigin: 'top center',
+                    backgroundImage: 'url(/backgrounds/stage_3.png)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
                   }}
-                />
-                <style>{`
-                  .ProseMirror {
-                    white-space: pre-wrap;
-                    position: relative;
-                    z-index: 1;
-                  }
-                  .ProseMirror p {
-                    margin: 0;
-                    line-height: ${editorSettings.lineHeight};
-                  }
-                  .ProseMirror p + p {
-                    margin-top: 0;
-                  }
-                  .ProseMirror br {
-                    display: block;
-                    content: "";
-                    margin-top: 0;
-                  }
-                `}</style>
-                <div className="relative z-10 h-full" style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: editorSettings.verticalAlignment === 'top' ? 'flex-start' : 
-                                   editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'
-                }}>
-                  {/* Non-editable title section - only show on first page */}
-                  {currentPageIndex === 0 && authorInfo.title && (
-                    <div 
-                      className="px-[60px] pt-[80px] pb-5"
-                      style={{
-                        fontFamily: getTitleFont(), // Use 학교안심 for title (same as body)
-                        fontSize: '60px',
-                        color: '#333',
-                        textAlign: 'center', // Always center-align the title in preview mode
-                        lineHeight: '1.5',
-                        pointerEvents: 'none',
-                        userSelect: 'none'
-                      }}
-                    >
-                      {authorInfo.title}
-                    </div>
-                  )}
-                  
-                  {/* Editor content with adjusted padding */}
+                  onClick={() => {
+                    if (currentPageIndex !== pageIndex) {
+                      navigateToPageWithEditorSync(pageIndex);
+                    }
+                  }}
+                >
+                  {/* Background overlay for text readability */}
                   <div 
-                    className="relative"
+                    className="absolute inset-0" 
                     style={{
-                      paddingTop: currentPageIndex === 0 && authorInfo.title ? '0' : undefined,
-                      height: calculateAvailableTextHeight(),
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden' // Prevent scrolling beyond the visible area
+                      backgroundColor: 'rgba(255, 255, 255, 0.3)'
                     }}
-                  >
-                    <EditorContent editor={editor} />
+                  />
+                  <style>{`
+                    .ProseMirror {
+                      white-space: pre-wrap;
+                      position: relative;
+                      z-index: 1;
+                    }
+                    .ProseMirror p {
+                      margin: 0;
+                      line-height: ${editorSettings.lineHeight};
+                    }
+                    .ProseMirror p + p {
+                      margin-top: 0;
+                    }
+                    .ProseMirror br {
+                      display: block;
+                      content: "";
+                      margin-top: 0;
+                    }
+                  `}</style>
+                  <div className="relative z-10 h-full" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: editorSettings.verticalAlignment === 'top' ? 'flex-start' : 
+                                     editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'
+                  }}>
+                    {/* Non-editable title section - only show on first page */}
+                    {pageIndex === 0 && authorInfo.title && (
+                      <div 
+                        style={{
+                          paddingLeft: `${BASE_PAGE_PADDING}px`,
+                          paddingRight: `${BASE_PAGE_PADDING}px`,
+                          paddingTop: '80px',
+                          paddingBottom: '20px',
+                          fontFamily: getTitleFont(),
+                          fontSize: '60px',
+                          color: '#333',
+                          textAlign: 'center',
+                          lineHeight: '1.5',
+                          pointerEvents: 'none',
+                          userSelect: 'none'
+                        }}
+                      >
+                        {authorInfo.title}
+                      </div>
+                    )}
                     
-                    {/* Visual indicator when approaching text limit */}
+                    {/* Page content - Editable only if it's the current page */}
                     <div 
-                      className="absolute bottom-10 left-0 right-0 pointer-events-none"
+                      className="relative"
                       style={{
-                        height: '100px',
-                        background: 'rgba(255, 255, 255, 0.8)',
-                        zIndex: 10
+                        paddingLeft: `${BASE_PAGE_PADDING}px`,
+                        paddingRight: `${BASE_PAGE_PADDING}px`,
+                        paddingBottom: `${BASE_PAGE_PADDING}px`,
+                        paddingTop: pageIndex === 0 && authorInfo.title ? '0' : `${BASE_PAGE_PADDING}px`,
+                        height: calculateAvailableTextHeight(),
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        fontFamily: editorSettings.fontFamily,
+                        fontSize: `${editorSettings.fontSize}px`,
+                        lineHeight: editorSettings.lineHeight,
+                        color: '#333',
+                        textAlign: editorSettings.textAlignment,
+                        whiteSpace: 'pre-wrap'
                       }}
-                    />
-                    
-                    {/* Text limit warning */}
-                    <div 
-                      className="absolute bottom-12 right-2 text-xs text-gray-600 pointer-events-none"
-                      style={{ zIndex: 11, fontSize: '25px' }}
                     >
-                    주의: 해당 블럭부터 이미지에 표시되지 않습니다
+                      {/* Show editor only for current page, otherwise show read-only content */}
+                      {currentPageIndex === pageIndex ? (
+                        <EditorContent editor={editor} />
+                      ) : (
+                        <div 
+                          className="w-full h-full cursor-pointer"
+                          dangerouslySetInnerHTML={{ __html: textToHtmlWithLineBreaks(page.content || '') }}
+                        />
+                      )}
+                      
+                      {/* Visual indicator when approaching text limit - only on current page */}
+                      {currentPageIndex === pageIndex && (
+                        <>
+                          <div 
+                            className="absolute bottom-10 left-0 right-0 pointer-events-none"
+                            style={{
+                              height: '100px',
+                              background: 'rgba(255, 255, 255, 0.8)',
+                              zIndex: 10
+                            }}
+                          />
+                          
+                          {/* Text limit warning */}
+                          <div 
+                            className="absolute bottom-12 right-2 text-xs text-gray-600 pointer-events-none"
+                            style={{ zIndex: 11, fontSize: '25px' }}
+                          >
+                            주의: 해당 블럭부터 이미지에 표시되지 않습니다
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
