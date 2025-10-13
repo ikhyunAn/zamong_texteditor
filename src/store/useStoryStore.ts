@@ -247,9 +247,9 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     console.log(`[Store.addPage] Creating new page, current pages: ${pages.length}`);
     console.trace('[Store.addPage] Call stack:');
     
-    // Prevent adding more than 6 pages total
-    if (pages.length >= 6) {
-      console.warn(`[Store.addPage] Cannot add page, already at maximum (6 pages)`);
+    // Prevent adding more than 4 pages total
+    if (pages.length >= 4) {
+      console.warn(`[Store.addPage] Cannot add page, already at maximum (4 pages)`);
       return false; // Return false to indicate failure
     }
     
@@ -279,10 +279,21 @@ export const useStoryStore = create<StoryStore>()((set, get) => ({
     const { pages } = get();
     console.log('[Store.initializeWithEmptyPage] Called, current pages:', pages.length);
     
-    // Only create a page if there are truly no pages
+    // Only create pages if there are truly no pages
     if (pages.length === 0) {
-      console.log('[Store.initializeWithEmptyPage] Creating initial page');
-      get().addPage('');
+      console.log('[Store.initializeWithEmptyPage] Creating initial 4 pages');
+      // Create 4 empty pages for automatic content flow
+      const initialPages: Page[] = [];
+      for (let i = 0; i < 4; i++) {
+        const timestamp = Date.now() + i; // Ensure unique timestamps
+        const random = Math.random().toString(36).substr(2, 9);
+        initialPages.push({
+          id: `page-${timestamp}-${random}`,
+          content: '',
+          backgroundTemplate: undefined
+        });
+      }
+      set({ pages: initialPages, currentPageIndex: 0 });
     } else {
       console.log('[Store.initializeWithEmptyPage] Pages already exist, skipping initialization');
     }

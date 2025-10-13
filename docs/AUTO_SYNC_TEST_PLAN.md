@@ -13,7 +13,7 @@ This document outlines comprehensive testing scenarios to validate the automatic
 6. **Added comprehensive error handling** - Exponential backoff retry, validation, and user feedback
 
 ### Key Features
-- **Automatic sync triggers**: Content changes, page navigation, window blur, page breaks, new pages
+- **Automatic sync triggers**: Content changes, page navigation, window blur, automatic pagination split/merge
 - **Smart retry system**: Exponential backoff with max 3 attempts
 - **Health monitoring**: Periodic checks for stale sync states
 - **Queue management**: Handles concurrent sync operations
@@ -41,15 +41,15 @@ This document outlines comprehensive testing scenarios to validate the automatic
 
 ### 2. Page Management Operations
 
-#### 2.1 Page Break Sync
-- [ ] **Test**: Insert page break (Ctrl+Enter)
+#### 2.1 Automatic Pagination Sync
+- [ ] **Test**: Type until content overflows to next page (auto-split)
 - [ ] **Expected**: Both pages sync automatically after split
 - [ ] **Validation**: Check content integrity, no data loss
 
-#### 2.2 Add New Page Sync
-- [ ] **Test**: Add new page via button or Ctrl+Shift+N
-- [ ] **Expected**: Current page syncs before new page creation
-- [ ] **Validation**: Previous page content preserved, new page empty
+#### 2.2 Reflow Backwards Sync
+- [ ] **Test**: Delete content so it pulls back from next page
+- [ ] **Expected**: Previous page and next page sync correctly
+- [ ] **Validation**: No data loss during merge/reflow
 
 #### 2.3 Rapid Navigation
 - [ ] **Test**: Quickly navigate between multiple pages
@@ -136,8 +136,8 @@ This document outlines comprehensive testing scenarios to validate the automatic
 ### 7. Accessibility & Usability
 
 #### 7.1 Keyboard Navigation
-- [ ] **Test**: Use all keyboard shortcuts (Ctrl+←/→, Ctrl+Enter, Ctrl+Shift+N)
-- [ ] **Expected**: All shortcuts work with auto-sync
+- [ ] **Test**: Use page navigation shortcuts (Ctrl+←/→)
+- [ ] **Expected**: Navigation works with auto-sync
 - [ ] **Validation**: No sync conflicts with keyboard operations
 
 #### 7.2 Screen Reader Compatibility
@@ -153,7 +153,7 @@ This document outlines comprehensive testing scenarios to validate the automatic
 ### 8. Edge Cases & Stress Testing
 
 #### 8.1 Rapid-Fire Operations
-- [ ] **Test**: Quickly perform: type → navigate → page break → type → add page
+- [ ] **Test**: Quickly perform: type → navigate → auto-split → type → reflow back
 - [ ] **Expected**: All operations complete successfully
 - [ ] **Validation**: Content integrity maintained throughout
 
@@ -163,7 +163,7 @@ This document outlines comprehensive testing scenarios to validate the automatic
 - [ ] **Validation**: Latest content preserved after reload
 
 #### 8.3 Maximum Page Limits
-- [ ] **Test**: Create maximum pages (6) with auto-sync active
+- [ ] **Test**: Create maximum pages (4) with auto-sync active
 - [ ] **Expected**: Sync continues working at limits
 - [ ] **Validation**: No performance issues at capacity
 

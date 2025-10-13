@@ -220,7 +220,7 @@ if (currentPageIndex === 0) {
 
 ### Memory Usage
 - **Snapshot Storage**: ~1KB per page average
-- **Maximum Overhead**: ~6KB for full 6-page document
+- **Maximum Overhead**: ~4KB for full 4-page document
 - **Cleanup Strategy**: Automatic garbage collection on component unmount
 
 ### Processing Overhead
@@ -239,7 +239,7 @@ if (currentPageIndex === 0) {
 5. **Advanced Analytics**: Content integrity metrics dashboard
 
 ### Scalability Considerations
-1. **Large Documents**: Optimize for documents >6 pages
+1. **Large Documents**: Optimize for documents >4 pages
 2. **Heavy Content**: Handle images and multimedia content
 3. **Collaborative Editing**: Multi-user content integrity
 4. **Cloud Sync**: Remote snapshot storage and retrieval

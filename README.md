@@ -26,6 +26,12 @@ Steps
 
 See public/backgrounds/README.md and public/fonts/README.md for details.
 
+## Editor behavior at a glance
+- Initializes with 4 empty pages (fixed 4-page limit)
+- Automatic overflow/reflow between pages (no manual page breaks)
+- First page keeps a special title layout
+- Page canvas scales proportionally to fit the viewport; editor controls remain fixed size
+
 ## Tech stack
 - Next.js 15, React 18, TypeScript
 - Tailwind CSS, Lucide React, Radix UI

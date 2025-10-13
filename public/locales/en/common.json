@@ -56,7 +56,7 @@
     "incompleteContentMessage": "Please write some content before proceeding.",
     "pageBreakMessages": {
       "editorNotReady": "Editor is not ready. Please try again.",
-      "maxPagesReached": "Cannot insert page break. Maximum of 6 pages allowed.",
+      "maxPagesReached": "Cannot insert page break. Maximum of 4 pages allowed.",
       "emptyPage": "Cannot insert page break on empty page. Add some content first.",
       "integrityFailed": "Page break operation failed. Content integrity could not be preserved.",
       "success": "Page break inserted successfully!",

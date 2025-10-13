@@ -68,10 +68,10 @@ The application addresses the growing need for visual storytelling on social med
 
 ### 📝 Advanced Story Editor
 - **Rich Text Editing** with Tiptap integration for professional text formatting
-- **Smart Pagination** with automatic page break detection and 6-page limit
+- **Smart Pagination** with automatic overflow/reflow and a fixed 4-page limit
 - **Korean Typography** with specialized font rendering and metrics calculation
 - **Real-time Preview** with background image overlay for accurate visualization
-- **Keyboard Shortcuts** for efficient navigation (Ctrl+Enter for page breaks)
+- **Keyboard Shortcuts** for efficient navigation (previous/next page)
 - **Content Synchronization** ensuring data consistency across pages
 
 ### 🎨 Professional Image Generation
@@ -336,8 +336,8 @@ The heart of the application, featuring a sophisticated text editor with paginat
 #### Core Features
 
 **📄 Smart Pagination**
-- Automatic page management with 6-page limit
-- Intelligent page break insertion (Ctrl+Enter)
+- Automatic page management with a fixed 4-page limit
+- Automatic pagination (no manual page breaks or page creation)
 - Content synchronization across pages
 - Real-time character and line counting
 
@@ -357,8 +357,6 @@ The heart of the application, featuring a sophisticated text editor with paginat
 ```
 Ctrl/Cmd + ←       Navigate to previous page
 Ctrl/Cmd + →       Navigate to next page
-Ctrl/Cmd + Enter   Insert page break at cursor
-Ctrl/Cmd + Shift + N   Add new empty page
 ```
 
 #### Technical Implementation
@@ -396,32 +394,14 @@ const debouncedUpdateContent = useMemo(
 );
 ```
 
-**Page Break Algorithm**
-Advanced page break insertion preserves content integrity:
+**Automatic Pagination**
+Content automatically overflows and reflows between pages. The editor observes content height and:
+- Splits overflowing content to the next page
+- Pulls content back when space becomes available
+- Preserves the first-page title layout
+- Enforces a fixed 4-page limit
 
-```typescript
-const insertPageBreak = useCallback(() => {
-  // 1. Get current cursor position
-  const { from } = editor.state.selection;
-  
-  // 2. Convert HTML to plain text preserving line breaks
-  const plainTextContent = htmlToTextWithLineBreaks(currentHtmlContent);
-  
-  // 3. Split content at cursor position
-  const { before, after } = splitContentPreservingLineBreaks(plainTextContent, textPosition);
-  
-  // 4. Validate content integrity
-  const isValid = validatePageBreakIntegrity(plainTextContent, before, after);
-  
-  // 5. Update pages and navigate
-  if (isValid) {
-    updateCurrentPageContent(before);
-    addNewPage();
-    // Set content on new page after navigation
-    setTimeout(() => updateCurrentPageContent(after), 200);
-  }
-}, [editor, updateCurrentPageContent, addNewPage]);
-```
+No manual page breaks or page creation shortcuts are available.
 
 #### Font System Integration
 
