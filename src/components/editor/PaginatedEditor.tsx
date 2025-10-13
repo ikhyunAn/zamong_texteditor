@@ -85,8 +85,8 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
         const containerWidth = containerRef.current.offsetWidth;
         const viewportHeight = window.innerHeight;
         
-        // Account for header/controls (roughly 300-350px)
-        const availableHeight = viewportHeight - 400;
+        // Reduce reserved space - CardHeader (~200px) + toolbar (~60px) + padding/margins (~40px) = ~300px
+        const availableHeight = viewportHeight - 300;
         const availableWidth = containerWidth - 60; // Padding
         
         // Calculate scale to fit both dimensions
@@ -834,14 +834,14 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
           <div 
             ref={editorRef}
             className="overflow-y-auto overflow-x-hidden"
-            style={{ maxHeight: `${Math.max(400, window.innerHeight - 400)}px` }}
+            style={{ maxHeight: `${Math.max(400, window.innerHeight - 300)}px` }}
           >
             <div className="space-y-6 pb-8 flex flex-col items-center">
               {/* Render all pages */}
               {pages.map((page, pageIndex) => (
                 <div
                   key={page.id}
-                  className="mx-auto"
+                  className="relative mx-auto"
                   style={{ width: `${BASE_PAGE_WIDTH * pageScale}px`, height: `${BASE_PAGE_HEIGHT * pageScale}px` }}
                 >
                 {/* Page Number */}
@@ -855,9 +855,12 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                     currentPageIndex === pageIndex ? 'border-blue-500' : 'border-gray-300'
                   }`}
                   style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
                     width: `${BASE_PAGE_WIDTH}px`,
                     height: `${BASE_PAGE_HEIGHT}px`,
-                    transform: `scale(${pageScale})`,
+                    transform: `translateX(-50%) scale(${pageScale})`,
                     transformOrigin: 'top center',
                     backgroundImage: 'url(/backgrounds/stage_3.png)',
                     backgroundSize: 'cover',
@@ -914,7 +917,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
                           fontSize: '60px',
                           color: '#333',
                           textAlign: 'center',
-                          lineHeight: '1.5',
+                          lineHeight: '1.8',
                           pointerEvents: 'none',
                           userSelect: 'none'
                         }}
