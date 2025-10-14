@@ -8,7 +8,7 @@ import { FixedSizeList as List } from 'react-window';
 import { useStoryStore } from '../../store/useStoryStore';
 import { usePageManager } from '../../hooks/usePageManager';
 import { useSyncStatus } from '../../hooks/useSyncStatus';
-import { useAutoPagination } from '../../hooks/useAutoPagination';
+import { useUniversalPagination } from '../../hooks/useUniversalPagination';
 import { LINE_HEIGHT_OPTIONS, getTitleFont } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -178,13 +178,13 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
   });
   
   // Automatic pagination system - must be after editor is created
-  const { 
+  const {
     isProcessing: isAutoPaginating,
-    checkPagination
-  } = useAutoPagination({
+    repaginate
+  } = useUniversalPagination({
     editor,
     enabled: true,
-    debounceMs: 500 // Slightly longer debounce for better UX
+    debounceMs: 150 // Faster reflow to prevent temporary overlap with title
   });
 
   // Update text alignment dynamically when needed
@@ -208,7 +208,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
         // Queue sync with the updated content
         queueSync(textContent, 'editor-update');
       }
-    }, 300),
+    }, 100),
     [getCurrentPageContent, updateCurrentPageContent, queueSync]
   );
 

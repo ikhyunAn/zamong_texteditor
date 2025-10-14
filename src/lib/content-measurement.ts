@@ -95,7 +95,8 @@ export function estimateTextHeight(
   measureEl.style.lineHeight = `${lineHeight}`;
   measureEl.style.fontFamily = fontFamily;
   measureEl.style.whiteSpace = 'pre-wrap';
-  measureEl.style.wordBreak = 'break-word';
+  // Match editor default behavior more closely
+  measureEl.style.wordBreak = 'normal';
   measureEl.textContent = text;
   
   document.body.appendChild(measureEl);
