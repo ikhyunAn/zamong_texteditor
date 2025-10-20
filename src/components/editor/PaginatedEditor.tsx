@@ -163,6 +163,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     }
   }, [editorSettings.fontFamily, setFontFamily]); // Include dependencies
 
+  const EDT_PAGE_PADDING = BASE_PAGE_PADDING - 35;
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -171,7 +172,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     editorProps: {
       attributes: {
         class: `w-full h-full resize-none outline-none bg-transparent`,
-        style: `padding-left: ${BASE_PAGE_PADDING}px; padding-right: ${BASE_PAGE_PADDING}px; padding-bottom: ${BASE_PAGE_PADDING}px; padding-top: ${currentPageIndex === 0 && authorInfo.title ? '0' : BASE_PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
+        style: `padding-left: ${EDT_PAGE_PADDING}px; padding-right: ${EDT_PAGE_PADDING}px; padding-bottom: ${EDT_PAGE_PADDING}px; padding-top: ${currentPageIndex === 0 && authorInfo.title ? '0' : EDT_PAGE_PADDING}px; font-family: ${editorSettings.fontFamily}; font-size: ${editorSettings.fontSize}px; line-height: ${editorSettings.lineHeight}; color: #333; text-align: ${editorSettings.textAlignment}; display: flex; flex-direction: column; justify-content: ${editorSettings.verticalAlignment === 'top' ? 'flex-start' : editorSettings.verticalAlignment === 'middle' ? 'center' : 'flex-end'};`,
         contenteditable: 'true',
       },
     },
