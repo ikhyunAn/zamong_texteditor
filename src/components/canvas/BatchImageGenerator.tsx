@@ -50,7 +50,9 @@ function wrapTextUsingDOM(
 
   // Simple cache to reduce repeated DOM layout work
   const cacheKey = `${options.fontFamily}|${options.fontSize}|${options.lineHeight}|${options.textAlign}|${Math.floor(options.width)}|${text}`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (wrapTextUsingDOM as any)._cache = (wrapTextUsingDOM as any)._cache || new Map<string, string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cache: Map<string, string> = (wrapTextUsingDOM as any)._cache;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
@@ -133,7 +135,7 @@ function wrapTextUsingDOM(
       if (segLines.length > 1) {
         const last = segLines[segLines.length - 1];
         const isEmpty = last.length === 0;
-        const isWhitespaceOnly = last.length > 0 && /^[\s\u00A0\u2007\u202F\u200B\u2060\u3000]+$/u.test(last);
+        const isWhitespaceOnly = last.length > 0 && /^[\s\u00A0\u2007\u202F\u200B\u2060\u3000]+$/.test(last);
         if (isEmpty || isWhitespaceOnly) {
           segLines.pop();
         }
@@ -267,7 +269,9 @@ export function BatchImageGenerator() {
 
       // Ensure CSS fonts are ready before canvas operations to avoid wrap drift
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (document as any).fonts.ready;
         }
       } catch (e) {

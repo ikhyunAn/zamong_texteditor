@@ -15,7 +15,6 @@ import { debounce } from '../../lib/debounce';
 import { 
   htmlToTextWithLineBreaks, 
   textToHtmlWithLineBreaks, 
-  splitContentPreservingLineBreaks,
   validatePageBreakIntegrity 
 } from '../../lib/text-processing';
 import { useToast } from '../../hooks/useToast';
@@ -24,8 +23,8 @@ import {
   ArrowRight, 
   AlertCircle, 
   BookOpen, 
-  Bold as BoldIcon, 
-  Italic as ItalicIcon,
+  // Bold as BoldIcon, 
+  // Italic as ItalicIcon,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -49,7 +48,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
   const { t } = useTranslation('common');
   const { 
     editorSettings, 
-    sections, 
+    // sections, 
     pages, 
     currentPageIndex,
     getCurrentPageContent,
@@ -442,110 +441,110 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
    * - Provides user feedback for all operations
    * - Includes error handling for edge cases
    */
-  const insertPageBreak = useCallback(() => {
-    // Clear any existing message
-    setPageBreakMessage('');
+  // const insertPageBreak = useCallback(() => {
+  //   // Clear any existing message
+  //   setPageBreakMessage('');
     
-    if (!editor) {
-      setPageBreakMessage(t('editor.pageBreakMessages.editorNotReady'));
-      return;
-    }
+  //   if (!editor) {
+  //     setPageBreakMessage(t('editor.pageBreakMessages.editorNotReady'));
+  //     return;
+  //   }
     
-    if (pageInfo.currentPage >= 4) {
-      setPageBreakMessage(t('editor.pageBreakMessages.maxPagesReached'));
-      return;
-    }
+  //   if (pageInfo.currentPage >= 4) {
+  //     setPageBreakMessage(t('editor.pageBreakMessages.maxPagesReached'));
+  //     return;
+  //   }
     
-    // Get HTML content to preserve formatting and line breaks
-    const currentHtmlContent = editor.getHTML();
-    const currentTextContent = editor.getText();
+  //   // Get HTML content to preserve formatting and line breaks
+  //   const currentHtmlContent = editor.getHTML();
+  //   const currentTextContent = editor.getText();
     
-    // Check if there's any content to split
-    if (!currentTextContent.trim()) {
-      setPageBreakMessage(t('editor.pageBreakMessages.emptyPage'));
-      setTimeout(() => setPageBreakMessage(''), 3000);
-      return;
-    }
+  //   // Check if there's any content to split
+  //   if (!currentTextContent.trim()) {
+  //     setPageBreakMessage(t('editor.pageBreakMessages.emptyPage'));
+  //     setTimeout(() => setPageBreakMessage(''), 3000);
+  //     return;
+  //   }
     
-    // Get current selection range
-    const { from } = editor.state.selection;
+  //   // Get current selection range
+  //   const { from } = editor.state.selection;
     
-    // Convert HTML to plain text while preserving line breaks
-    const plainTextContent = htmlToTextWithLineBreaks(currentHtmlContent);
+  //   // Convert HTML to plain text while preserving line breaks
+  //   const plainTextContent = htmlToTextWithLineBreaks(currentHtmlContent);
     
-    // Calculate the actual text position accounting for line breaks
-    let textPosition = 0;
-    const editorText = editor.getText();
-    for (let i = 0; i < editorText.length && i < from; i++) {
-      textPosition++;
-    }
+  //   // Calculate the actual text position accounting for line breaks
+  //   let textPosition = 0;
+  //   const editorText = editor.getText();
+  //   for (let i = 0; i < editorText.length && i < from; i++) {
+  //     textPosition++;
+  //   }
     
-    // Use enhanced splitting function that preserves line breaks
-    const { before: beforeContent, after: afterContent } = splitContentPreservingLineBreaks(plainTextContent, textPosition);
+  //   // Use enhanced splitting function that preserves line breaks
+  //   const { before: beforeContent, after: afterContent } = splitContentPreservingLineBreaks(plainTextContent, textPosition);
     
-    // Validate that the split operation preserves content integrity
-    const isValid = validatePageBreakIntegrity(plainTextContent, beforeContent, afterContent);
-    if (!isValid) {
-      setPageBreakMessage(t('editor.pageBreakMessages.integrityFailed'));
-      setTimeout(() => setPageBreakMessage(''), 3000);
-      return;
-    }
+  //   // Validate that the split operation preserves content integrity
+  //   const isValid = validatePageBreakIntegrity(plainTextContent, beforeContent, afterContent);
+  //   if (!isValid) {
+  //     setPageBreakMessage(t('editor.pageBreakMessages.integrityFailed'));
+  //     setTimeout(() => setPageBreakMessage(''), 3000);
+  //     return;
+  //   }
     
-    // Show success message
-    setPageBreakMessage(t('editor.pageBreakMessages.success'));
-    setTimeout(() => setPageBreakMessage(''), 2000);
+  //   // Show success message
+  //   setPageBreakMessage(t('editor.pageBreakMessages.success'));
+  //   setTimeout(() => setPageBreakMessage(''), 2000);
     
-    // Update current page with content before cursor
-    if (beforeContent) {
-      const beforeHtml = textToHtmlWithLineBreaks(beforeContent);
-      updateCurrentPageContent(beforeContent); // Don't trim to preserve whitespace
-      // Set editor content with preserved formatting
-      editor.commands.setContent(beforeHtml);
+  //   // Update current page with content before cursor
+  //   if (beforeContent) {
+  //     const beforeHtml = textToHtmlWithLineBreaks(beforeContent);
+  //     updateCurrentPageContent(beforeContent); // Don't trim to preserve whitespace
+  //     // Set editor content with preserved formatting
+  //     editor.commands.setContent(beforeHtml);
       
-      // Automatically sync content immediately
-      syncNow(beforeContent, 'page-break-before');
-    } else {
-      // If no content before cursor, keep current page empty
-      updateCurrentPageContent('');
-      editor.commands.setContent('<p></p>');
+  //     // Automatically sync content immediately
+  //     syncNow(beforeContent, 'page-break-before');
+  //   } else {
+  //     // If no content before cursor, keep current page empty
+  //     updateCurrentPageContent('');
+  //     editor.commands.setContent('<p></p>');
       
-      // Sync empty content
-      syncNow('', 'page-break-empty');
-    }
+  //     // Sync empty content
+  //     syncNow('', 'page-break-empty');
+  //   }
     
-    // Create new page with content after cursor and navigate to it
-    setTimeout(() => {
-      // Add new page and let addNewPage handle the navigation
-      addNewPage();
+  //   // Create new page with content after cursor and navigate to it
+  //   setTimeout(() => {
+  //     // Add new page and let addNewPage handle the navigation
+  //     addNewPage();
       
-      // Set content on the new page after a brief delay to ensure page is created
-      setTimeout(() => {
-        if (afterContent) {
-          const afterHtml = textToHtmlWithLineBreaks(afterContent);
-          updateCurrentPageContent(afterContent); // Don't trim to preserve whitespace
-          if (editor && !editor.isDestroyed) {
-            editor.commands.setContent(afterHtml);
-            // Focus the editor on the new page
-            editor.commands.focus('start');
-          }
+  //     // Set content on the new page after a brief delay to ensure page is created
+  //     setTimeout(() => {
+  //       if (afterContent) {
+  //         const afterHtml = textToHtmlWithLineBreaks(afterContent);
+  //         updateCurrentPageContent(afterContent); // Don't trim to preserve whitespace
+  //         if (editor && !editor.isDestroyed) {
+  //           editor.commands.setContent(afterHtml);
+  //           // Focus the editor on the new page
+  //           editor.commands.focus('start');
+  //         }
           
-          // Automatically sync the new page content
-          syncNow(afterContent, 'page-break-after');
-        } else {
-          // Ensure new page starts with proper structure and focus
-          if (editor && !editor.isDestroyed) {
-            editor.commands.setContent('<p></p>');
-            editor.commands.focus('start');
-          }
+  //         // Automatically sync the new page content
+  //         syncNow(afterContent, 'page-break-after');
+  //       } else {
+  //         // Ensure new page starts with proper structure and focus
+  //         if (editor && !editor.isDestroyed) {
+  //           editor.commands.setContent('<p></p>');
+  //           editor.commands.focus('start');
+  //         }
           
-          // Sync empty content for new page
-          syncNow('', 'page-break-new-empty');
-        }
-        // Scroll to editor after navigation
-        scrollToEditor();
-      }, 200); // Increased delay to ensure navigation completes
-    }, 50);
-  }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, scrollToEditor, syncNow, t]);
+  //         // Sync empty content for new page
+  //         syncNow('', 'page-break-new-empty');
+  //       }
+  //       // Scroll to editor after navigation
+  //       scrollToEditor();
+  //     }, 200); // Increased delay to ensure navigation completes
+  //   }, 50);
+  // }, [editor, pageInfo.currentPage, updateCurrentPageContent, addNewPage, scrollToEditor, syncNow, t]);
 
   /**
    * KEYBOARD SHORTCUTS FOR PAGE NAVIGATION AND EDITING
@@ -590,11 +589,11 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
             }, 200);
           }
         }
-        // Ctrl/Cmd + Enter: Insert page break
-        else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.preventDefault();
-          insertPageBreak();
-        }
+        // // Ctrl/Cmd + Enter: Insert page break
+        // else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        //   event.preventDefault();
+        //   insertPageBreak();
+        // }
         // Ctrl/Cmd + Shift + N: Add new page
         else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'N') {
           event.preventDefault();
@@ -607,7 +606,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, insertPageBreak, addNewPageWithSync, pages.length]);
+  }, [editor, pageInfo, navigateToPageWithEditorSync, scrollToEditor, addNewPageWithSync, pages.length]);
 
   useEffect(() => {
     if (!editor || pages.length === 0) {
@@ -896,7 +895,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
           )}
           
           {/* Page Break Button */}
-          <Button 
+          {/* <Button 
             onClick={insertPageBreak}
             disabled={pageInfo.currentPage >= 4}
             size="sm"
@@ -904,7 +903,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
             title={t('editor.insertPageBreakTitle')}
           >
             {t('editor.insertPageBreak')}
-          </Button>
+          </Button> */}
           
           {/* Add New Page Button */}
           <Button 
@@ -941,23 +940,6 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
 
         {/* Editor Toolbar */}
         <div className="flex items-center gap-2 p-2 border rounded-md bg-gray-50">
-          <Button
-            type="button"
-            variant={editor.isActive('bold') ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          >
-            <BoldIcon className="w-4 h-4" />
-          </Button>
-          
-          <Button
-            type="button"
-            variant={editor.isActive('italic') ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          >
-            <ItalicIcon className="w-4 h-4" />
-          </Button>
           
           <div className="h-4 w-px bg-gray-300 mx-2" />
           
@@ -1182,13 +1164,15 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
         </div>
 
         {/* Page Statistics */}
+        {/* Consider replacing the grid to the following componeent if you want center alignment */}
+        {/* <div className="flex justify-center"> */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="p-3 bg-blue-50 rounded-md">
             <div className="text-lg font-semibold text-blue-600">{pageInfo.totalPages}</div>
             <div className="text-sm text-blue-600">{t('editor.totalPages')}</div>
           </div>
           
-          <div className="p-3 bg-green-50 rounded-md">
+          {/* <div className="p-3 bg-green-50 rounded-md">
             <div className="text-lg font-semibold text-green-600">{sections.length}</div>
             <div className="text-sm text-green-600">{t('editor.sections')}</div>
           </div>
@@ -1201,7 +1185,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
           <div className="p-3 bg-orange-50 rounded-md">
             <div className="text-lg font-semibold text-orange-600">{getCurrentPageContent()?.length || 0}</div>
             <div className="text-sm text-orange-600">{t('editor.pageCharacters')}</div>
-          </div>
+          </div> */}
         </div>
       </CardContent>
     </Card>
