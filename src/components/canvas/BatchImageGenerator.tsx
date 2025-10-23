@@ -216,7 +216,7 @@ export function BatchImageGenerator() {
   
   // Ensure sections are synced with latest editor settings when component mounts
   useEffect(() => {
-    if (sections && sections.length > 0 && !hasSyncedRef.current) {
+    if (sections && actualLastPageNumber > 0 && !hasSyncedRef.current) {
       syncEditorSettingsToSections();
       hasSyncedRef.current = true;
     }
@@ -243,6 +243,30 @@ export function BatchImageGenerator() {
       });
     };
   }, []); // Only run on unmount
+
+  // Determine the last page that actually has meaningful content
+  const hasMeaningfulContent = (value: string | undefined | null) => {
+    if (!value) return false;
+    // Remove all whitespace including: spaces, tabs, newlines, non-breaking spaces, zero-width spaces, etc.
+    const stripped = value.replace(/[\s\u00A0\u2007\u202F\u200B\u2060\u3000]/g, '');
+    return stripped.length > 0;
+  };
+
+  let lastContentIndex = -1;
+  if (Array.isArray(sections) && sections.length > 0) {
+    for (let i = sections.length - 1; i >= 0; i--) {
+      const c = sections[i]?.content || '';
+      if (hasMeaningfulContent(c)) { lastContentIndex = i; break; }
+    }
+  }
+
+  // Fallback: if no pages have body content but title exists, treat page 1 as last page
+  const actualLastPageNumber = lastContentIndex >= 0
+    ? lastContentIndex + 1
+    : (authorInfo.title ? 1 : 0);
+  
+  console.log(actualLastPageNumber);
+
   
   // Function to generate image with background
   const generateImageWithBackground = useCallback(async (
@@ -329,7 +353,7 @@ export function BatchImageGenerator() {
         // When using line height > 1, double newlines create too much space
         // Convert double newlines to single newlines to maintain paragraph separation
         // without excessive spacing when combined with line height multiplier
-        // FIXME: Fix this logic so as to not require authors to enter space for empty line
+        // DONE: Fix this logic so as to not require authors to enter space for empty line
         if (lineHeight > 1.0) {
           // Replace multiple consecutive newlines with single newline
           textContent = textContent.replace(/\n{2,}/g, '\n');
@@ -362,9 +386,31 @@ export function BatchImageGenerator() {
         // Add text to canvas first so Fabric.js can calculate dimensions
         (canvas as unknown as { add: (obj: unknown) => void }).add(text);
         
-        // Add writer's name for stage 4, last page only
-        const isLastPage = pageNumber === sections.length;
-        if ( isLastPage && backgroundId === 'stage_4' && authorInfo.name) {
+        // Add writer's name for stage 4, last actual page only
+
+        // // Determine the last page that actually has meaningful content
+        // const hasMeaningfulContent = (value: string | undefined | null) => {
+        //   if (!value) return false;
+        //   // Remove all whitespace including: spaces, tabs, newlines, non-breaking spaces, zero-width spaces, etc.
+        //   const stripped = value.replace(/[\s\u00A0\u2007\u202F\u200B\u2060\u3000]/g, '');
+        //   return stripped.length > 0;
+        // };
+        
+        // let lastContentIndex = -1;
+        // if (Array.isArray(sections) && sections.length > 0) {
+        //   for (let i = sections.length - 1; i >= 0; i--) {
+        //     const c = sections[i]?.content || '';
+        //     if (hasMeaningfulContent(c)) { lastContentIndex = i; break; }
+        //   }
+        // }
+        
+        // // Fallback: if no pages have body content but title exists, treat page 1 as last page
+        // const actualLastPageNumber = lastContentIndex >= 0
+        //   ? lastContentIndex + 1
+        //   : (authorInfo.title ? 1 : 0);
+        
+        const isLastActualPage = pageNumber === actualLastPageNumber;
+        if ( isLastActualPage && backgroundId === 'stage_4' && authorInfo.name) {
           const writerName = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(authorInfo.name, {
             left: EXPORT_DIMENSIONS.width - MARGIN - 200, // Will adjust after measuring
             top: EXPORT_DIMENSIONS.height - MARGIN - 40, // Bottom margin minus font size
@@ -530,13 +576,14 @@ export function BatchImageGenerator() {
   
   // Function to generate preview images for all sections and backgrounds
   const generatePreviews = useCallback(async () => {
-    if (!sections || sections.length === 0) return;
+    if (!sections || actualLastPageNumber === 0) return;
     
     setIsGeneratingPreviews(true);
     const newPreviews: PreviewImage[] = [];
     
     try {
-      for (let pageIndex = 0; pageIndex < sections.length; pageIndex++) {
+      // Generate Images only for pages that have actual meaningful content
+      for (let pageIndex = 0; pageIndex < actualLastPageNumber; pageIndex++) {
         const section = sections[pageIndex];
         
         for (const background of DEFAULT_BACKGROUNDS) {
@@ -576,7 +623,7 @@ export function BatchImageGenerator() {
   
   // Function to generate and download ZIP file
   const handleGenerateAndDownload = async () => {
-    if (!sections || sections.length === 0) {
+    if (!sections || actualLastPageNumber === 0) {
       showError(t('export.errors.noContent'), t('export.errors.noContentMessage'));
       return;
     }
@@ -584,7 +631,7 @@ export function BatchImageGenerator() {
     setIsExporting(true);
     setExportProgress({
       current: 0,
-      total: sections.length * DEFAULT_BACKGROUNDS.length,
+      total: actualLastPageNumber * DEFAULT_BACKGROUNDS.length,
       stage: t('export.progress.initializing'),
       isComplete: false
     });
@@ -603,12 +650,12 @@ export function BatchImageGenerator() {
         }
         
         // Generate images for each section with this background
-        for (let pageIndex = 0; pageIndex < sections.length; pageIndex++) {
+        for (let pageIndex = 0; pageIndex < actualLastPageNumber; pageIndex++) {
           const section = sections[pageIndex];
           
           setExportProgress({
             current: currentProgress,
-            total: sections.length * DEFAULT_BACKGROUNDS.length,
+            total: actualLastPageNumber * DEFAULT_BACKGROUNDS.length,
             stage: t('export.progress.generating', { background: background.name, page: pageIndex + 1 }),
             isComplete: false
           });
@@ -640,7 +687,7 @@ export function BatchImageGenerator() {
       // Generate ZIP file
       setExportProgress({
         current: currentProgress,
-        total: sections.length * DEFAULT_BACKGROUNDS.length,
+        total: actualLastPageNumber * DEFAULT_BACKGROUNDS.length,
         stage: t('export.progress.creatingZip'),
         isComplete: false
       });
@@ -663,7 +710,7 @@ export function BatchImageGenerator() {
       
       setExportProgress({
         current: currentProgress,
-        total: sections.length * DEFAULT_BACKGROUNDS.length,
+        total: actualLastPageNumber * DEFAULT_BACKGROUNDS.length,
         stage: t('export.progress.complete'),
         isComplete: true
       });
@@ -707,7 +754,7 @@ export function BatchImageGenerator() {
     console.log('Sections data:', sections?.map(s => ({ id: s.id, contentLength: s.content?.length || 0, preview: s.content?.substring(0, 50) + '...' })) || 'No sections');
     console.groupEnd();
     
-    if (sections && sections.length > 0) {
+    if (sections && actualLastPageNumber > 0) {
       generatePreviews();
     }
   }, [sections, editorSettings.globalTextAlignment, editorSettings.textAlignment, editorSettings.verticalAlignment, editorSettings.fontSize, editorSettings.lineHeight, backgroundPreview, generatePreviews]);
@@ -716,7 +763,7 @@ export function BatchImageGenerator() {
     setCurrentStep(1);
   }, [setCurrentStep]);
 
-  if (!sections || sections.length === 0) {
+  if (!sections || actualLastPageNumber === 0) {
     return (
       <Card>
         <CardContent className="text-center py-8">
@@ -733,7 +780,7 @@ export function BatchImageGenerator() {
         <CardHeader>
           <CardTitle>{t('export.title')}</CardTitle>
           <CardDescription>
-            {t('export.description', { count: sections.length, plural: sections.length !== 1 ? 's' : '' })}
+            {t('export.description', { count: actualLastPageNumber, plural: actualLastPageNumber !== 1 ? 's' : '' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -752,20 +799,23 @@ export function BatchImageGenerator() {
             
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                <p>{t('export.totalPages', { count: sections.length })}</p>
-                <p>{t('export.totalImages', { count: sections.length * DEFAULT_BACKGROUNDS.length })}</p>
+                <p>{t('export.totalPages', { count: actualLastPageNumber })}</p>
+                <p>{t('export.totalImages', { count: actualLastPageNumber * DEFAULT_BACKGROUNDS.length })}</p>
               </div>
               <div className="flex items-center space-x-2">
-                {sections.map((section, index) => (
-                  <Badge
-                    key={section.id}
-                    variant={selectedPreviewPage === index ? 'default' : 'outline'}
-                    className="cursor-pointer transition-all transform ease-in-out hover:scale-105"
-                    onClick={() => setSelectedPreviewPage(index)}
-                  >
-                    Page {index + 1}
-                  </Badge>
-                ))}
+                {Array.from({ length: actualLastPageNumber }).map((_, pageIndex) => {
+                  const section = sections[pageIndex];
+                  return (
+                    <Badge
+                      key={section.id}
+                      variant={selectedPreviewPage === pageIndex ? 'default' : 'outline'}
+                      className="cursor-pointer transition-all transform ease-in-out hover:scale-105"
+                      onClick={() => setSelectedPreviewPage(pageIndex)}
+                    >
+                      Page {pageIndex + 1}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -791,12 +841,12 @@ export function BatchImageGenerator() {
             </div>
           ) : (
             <div className="space-y-6">
-              {sections.map((section, pageIndex) => (
+              {sections.slice(0, actualLastPageNumber).map((section, pageIndex) => (
                 <div key={section.id} className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">Page {pageIndex + 1}</Badge>
                     <span className="text-sm text-gray-600 truncate">
-                      {section.content.substring(0, 100)}...
+                      {(section.content || '').substring(0, 100)}...
                     </span>
                   </div>
                   

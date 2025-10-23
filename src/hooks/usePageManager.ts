@@ -74,8 +74,8 @@ export const usePageManager = () => {
         content: section.content.trim()
       });
       
-      // Check if we've reached the 6-page limit
-      if (newPages.length >= 6) {
+      // Check if we've reached the 4-page limit
+      if (newPages.length >= 4) {
         return; // Stop processing if we've reached the limit
       }
       
@@ -87,7 +87,7 @@ export const usePageManager = () => {
       }));
     });
 
-    return newPages.slice(0, 6); // Ensure we never exceed 6 pages
+    return newPages.slice(0, 4); // Ensure we never exceed 4 pages
   }, [calculateLineCount]);
 
   // Navigate to a specific page (simple version - unused, kept for potential future use)
@@ -101,10 +101,10 @@ export const usePageManager = () => {
   const checkPageLimits = useCallback(() => {
     const estimatedPages = Math.ceil(sections.length / 3); // Rough estimation
     
-    if (estimatedPages > 6) {
+    if (estimatedPages > 4) {
       return {
         exceedsLimit: true,
-        message: `Your content would create ${estimatedPages} pages, but the limit is 6 pages. Please reduce your content.`,
+        message: `Your content would create ${estimatedPages} pages, but the limit is 4 pages. Please reduce your content.`,
       };
     }
     
@@ -211,10 +211,10 @@ export const usePageManager = () => {
     const { pages: currentPages } = useStoryStore.getState();
     console.log(`[addNewPage-${timestamp}] Current pages:`, currentPages.length);
     
-    // Prevent adding more than 6 pages
-    if (currentPages.length >= 6) {
-      console.warn(`[addNewPage-${timestamp}] Cannot add more pages, already at maximum (6)`);
-      showWarning('Page Limit Reached', 'You can have a maximum of 6 pages in your story.');
+    // Prevent adding more than 4 pages
+    if (currentPages.length >= 4) {
+      console.warn(`[addNewPage-${timestamp}] Cannot add more pages, already at maximum (4)`);
+      showWarning('Page Limit Reached', 'You can have a maximum of 4 pages in your story.');
       return;
     }
     
