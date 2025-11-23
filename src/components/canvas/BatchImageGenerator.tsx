@@ -348,12 +348,13 @@ export function BatchImageGenerator() {
           textAlign: textStyle.alignment
         });
 
-        // Use fabric.Text instead of Textbox to prevent double-wrapping
-        // Since we've already wrapped the text using wrapTextUsingDOM, we don't want Fabric to wrap it again
-        const text = new (fabric as unknown as { Text: new (text: string, options?: unknown) => unknown }).Text(rewrapped, {
+        // Use fabric.Textbox so textAlign works against a fixed width box
+        // We still pass the pre-wrapped text (rewrapped) to minimize Fabric's own wrapping.
+        const text = new (fabric as unknown as { Textbox: new (text: string, options?: unknown) => unknown }).Textbox(rewrapped, {
           left: contentLeft,
           top: topOffset,
-          fontSize: editorSettings.fontSize || textStyle.fontSize, // Prioritize editorSettings like export worker
+          width: contentWidth, // Needed for alignment
+          fontSize: editorSettings.fontSize || textStyle.fontSize,
           fontFamily: ((window as unknown as { _canvasFonts?: { body?: string } })._canvasFonts?.body) || getBestCanvasFont('body'),
           fill: textStyle.color,
           textAlign: textStyle.alignment,
@@ -362,7 +363,6 @@ export function BatchImageGenerator() {
           selectable: false,
           evented: false
         });
-
         // Add text to canvas first so Fabric.js can calculate dimensions
         (canvas as unknown as { add: (obj: unknown) => void }).add(text);
         
@@ -432,9 +432,8 @@ export function BatchImageGenerator() {
           // Adjust text position
           if (isFirstPage && authorInfo.title && verticalAlign !== 'top') {
             // Reposition both title and text when not top-aligned
-            const titleElements = (canvas as unknown as { getObjects: () => unknown[] }).getObjects().filter((obj: unknown) => (obj as unknown as { type?: string }).type === 'text');
-            if (titleElements.length > 0) {
-              (titleElements[0] as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition });
+            if (titleElement) {
+              (titleElement as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition });
               (text as unknown as { set: (props: unknown) => void }).set({ top: finalTopPosition + 60 * 1.5 + 20 });
             }
           } else if (verticalAlign !== 'top') {
