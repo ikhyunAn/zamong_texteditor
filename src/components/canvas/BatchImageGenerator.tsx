@@ -798,9 +798,9 @@ export function BatchImageGenerator() {
                 <div key={section.id} className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline">Page {pageIndex + 1}</Badge>
-                    <span className="text-sm text-gray-600 truncate">
+                    {/* <span className="text-sm text-gray-600 truncate">
                       {section.content.substring(0, 100)}...
-                    </span>
+                    </span> */}
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
