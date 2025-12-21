@@ -109,6 +109,49 @@ function wrapTextUsingDOM(
     // Push last line
     lines.push(currentLine.join(''));
 
+    // DEBUG: Log lines before processing
+    if (segment.includes('피어나듯이')) {
+      console.log('[computeLines DEBUG] Segment contains target text');
+      console.log('[computeLines DEBUG] Raw lines:', lines.map((l, i) => `Line ${i}: "${l}" (length: ${l.length})`));
+    }
+
+    // Merge trailing whitespace-only lines back into previous line
+    // This prevents trailing spaces from creating extra visual line breaks
+    // while preserving the original content for editor consistency
+    while (lines.length > 1) {
+      const lastLine = lines[lines.length - 1];
+      const isWhitespaceOnly = /^[\s\u00A0\u2007\u202F\u200B\u2060\u3000]+$/.test(lastLine);
+      if (isWhitespaceOnly) {
+        lines.pop();
+        // Append the whitespace back to the previous line
+        lines[lines.length - 1] += lastLine;
+      } else {
+        break;
+      }
+    }
+
+    // NEW FIX: Also handle leading whitespace on wrapped lines
+    // When a trailing space causes a wrap, it may take the next character with it
+    // resulting in a line like " 아름다운..." - we should move the leading space
+    // to the end of the previous line
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const leadingWhitespaceMatch = line.match(/^([\s\u00A0\u2007\u202F\u200B\u2060\u3000]+)/);
+      if (leadingWhitespaceMatch) {
+        const leadingWhitespace = leadingWhitespaceMatch[1];
+        // Move leading whitespace to end of previous line
+        lines[i - 1] += leadingWhitespace;
+        // Remove leading whitespace from current line
+        lines[i] = line.slice(leadingWhitespace.length);
+        console.log(`[computeLines FIX] Moved leading whitespace from line ${i} to line ${i - 1}`);
+      }
+    }
+
+    // DEBUG: Log lines after processing
+    if (segment.includes('피어나듯이')) {
+      console.log('[computeLines DEBUG] Processed lines:', lines.map((l, i) => `Line ${i}: "${l}" (length: ${l.length})`));
+    }
+
     // Clean up for next segment
     container.innerHTML = '';
     return lines;
@@ -126,20 +169,8 @@ function wrapTextUsingDOM(
     } else {
       const segLines = computeLines(tk);
 
-      // Approach A: Unconditionally drop trailing whitespace-only or empty visual lines
-      // Use Unicode-aware regex to detect all types of whitespace including:
-      // \s (standard whitespace), \u00A0 (non-breaking space), \u2007 (figure space),
-      // \u202F (narrow no-break space), \u200B (zero-width space), \u2060 (word joiner),
-      // \u3000 (ideographic space)
-      // Also drop completely empty lines (length === 0)
-      if (segLines.length > 1) {
-        const last = segLines[segLines.length - 1];
-        const isEmpty = last.length === 0;
-        const isWhitespaceOnly = last.length > 0 && /^[\s\u00A0\u2007\u202F\u200B\u2060\u3000]+$/.test(last);
-        if (isEmpty || isWhitespaceOnly) {
-          segLines.pop();
-        }
-      }
+      // Note: Trailing whitespace-only lines are now merged back into the previous line
+      // inside computeLines() to preserve content while preventing extra visual line breaks
 
       // Join visual lines with sentinel to avoid interfering with original newline normalization
       assembled.push(segLines.join(SOFT));
@@ -182,7 +213,13 @@ function wrapTextUsingDOM(
   joined = joined.replace(new RegExp(`${SOFT}+\\n+`, 'g'), '\n');
   
   // Convert remaining sentinel soft wraps to real newlines
-  const rewrapped = joined.split(SOFT).join('\n');
+  let rewrapped = joined.split(SOFT).join('\n');
+  
+  // FIX: Strip trailing whitespace from each line before passing to Fabric.js
+  // This prevents trailing spaces from interfering with Fabric.js's own text rendering
+  // The DOM measurement already determined correct line breaks, trailing spaces are not needed
+  rewrapped = rewrapped.split('\n').map(line => line.trimEnd()).join('\n');
+  
   cache.set(cacheKey, rewrapped);
   return rewrapped;
 }
