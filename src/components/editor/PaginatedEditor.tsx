@@ -30,7 +30,8 @@ import {
   AlignRight,
   Plus,
   Minus,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 
 interface PaginatedEditorProps {
@@ -65,6 +66,7 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
     getPageInfo, 
     navigateToPage,
     addNewPage,
+    removeCurrentPage,
     updateCurrentPageContent,
   } = usePageManager();
   
@@ -388,6 +390,37 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
       addNewPage();
     }
   }, [editor, syncNow, addNewPage, storeSnapshot, currentPageIndex]);
+
+  // Remove current page wrapper with confirmation
+  const removePageWithSync = useCallback(() => {
+    // Prevent removing the first page
+    if (currentPageIndex === 0) {
+      setPageBreakMessage(t('editor.cannotRemoveFirstPage'));
+      setTimeout(() => setPageBreakMessage(''), 3000);
+      return;
+    }
+
+    // Confirm before removing
+    const confirmed = window.confirm(t('editor.removePageConfirm'));
+    if (!confirmed) {
+      return;
+    }
+
+    console.log('[RemovePage] Removing page at index:', currentPageIndex);
+    
+    // Clear the editor content before removing
+    if (editor) {
+      editor.commands.setContent('<p></p>');
+    }
+    
+    // Remove the page
+    const success = removeCurrentPage();
+    
+    if (success) {
+      setPageBreakMessage(t('editor.pageRemoved'));
+      setTimeout(() => setPageBreakMessage(''), 2000);
+    }
+  }, [editor, currentPageIndex, removeCurrentPage, t]);
 
   // Display sync status notification (replaces manual sync)  
   useEffect(() => {
@@ -914,6 +947,18 @@ const PaginatedEditor: React.FC<PaginatedEditorProps & { onEditorReady?: (editor
             title={t('editor.addNewPageTitle')}
           >
             {t('editor.addNewPage')}
+          </Button>
+          
+          {/* Remove Page Button */}
+          <Button 
+            onClick={removePageWithSync}
+            disabled={currentPageIndex === 0 || pages.length <= 1}
+            size="sm"
+            variant="destructive"
+            title={t('editor.removePageTitle')}
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            {t('editor.removePage')}
           </Button>
         </div>
       </CardHeader>

@@ -259,6 +259,50 @@ export const usePageManager = () => {
     }
   }, [addEmptyPage, storeNavigateToPage, showWarning, showError]);
 
+  // Remove the current page (except the first page)
+  const removeCurrentPage = useCallback(() => {
+    // Get the current pages state directly from the store to avoid stale closure values
+    const { pages: currentPages, currentPageIndex: currentIndex, deletePage } = useStoryStore.getState();
+    
+    console.log(`[removeCurrentPage] Called with currentIndex: ${currentIndex}, pages: ${currentPages.length}`);
+    
+    // Prevent removing the first page
+    if (currentIndex === 0) {
+      console.warn('[removeCurrentPage] Cannot remove the first page');
+      showWarning('Cannot Remove Page', 'The first page cannot be removed.');
+      return false;
+    }
+    
+    // Prevent removing if there's only one page
+    if (currentPages.length <= 1) {
+      console.warn('[removeCurrentPage] Cannot remove the only page');
+      showWarning('Cannot Remove Page', 'You must have at least one page.');
+      return false;
+    }
+    
+    // Get the page to delete
+    const pageToDelete = currentPages[currentIndex];
+    if (!pageToDelete) {
+      console.warn('[removeCurrentPage] Page not found at index:', currentIndex);
+      return false;
+    }
+    
+    console.log(`[removeCurrentPage] Removing page: ${pageToDelete.id}`);
+    
+    // Delete the page from the store
+    deletePage(pageToDelete.id);
+    
+    // Navigate to the previous page after deletion
+    setTimeout(() => {
+      const { pages: updatedPages } = useStoryStore.getState();
+      const newIndex = Math.min(currentIndex - 1, updatedPages.length - 1);
+      console.log(`[removeCurrentPage] Navigating to page index: ${newIndex}`);
+      storeNavigateToPage(Math.max(0, newIndex));
+    }, 50);
+    
+    return true;
+  }, [storeNavigateToPage, showWarning]);
+
   // Update the current page content
   const updateCurrentPageContent = useCallback((content: string) => {
     setCurrentPageContent(content);
@@ -439,6 +483,7 @@ export const usePageManager = () => {
     
     // Enhanced page management
     addNewPage,
+    removeCurrentPage,
     updateCurrentPageContent,
     autoPaginate,
     splitIntoPages,
